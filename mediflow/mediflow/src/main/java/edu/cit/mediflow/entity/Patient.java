@@ -1,12 +1,19 @@
 package edu.cit.mediflow.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.List;
 
-@Entity
-//@Document
+
+@Document(collection = "patient")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class Patient {
     @Id
     private String patientId;

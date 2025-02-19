@@ -1,9 +1,17 @@
 package edu.cit.mediflow.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
 
-@Entity
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+
+@Document(collection = "appointment")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class Appointment {
     @Id
     private String appointmentId;
