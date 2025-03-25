@@ -16,7 +16,7 @@ public class MediflowApplication {
 
 	@GetMapping("/hello")
 	public String apiRoot(){
-		return "Hello World";
+		return "index";
 	}
 
 }

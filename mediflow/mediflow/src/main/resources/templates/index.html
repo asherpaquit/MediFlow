@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>JWT API Tester</title>
+    <script>
+        async function login() {
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+
+            const response = await fetch('/auth/login?username=' + username + '&password=' + password, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            });
+
+            const data = await response.json();
+            if (data.token) {
+                document.getElementById("token").value = data.token;
+                document.getElementById("status").innerText = "Login Successful!";
+            } else {
+                document.getElementById("status").innerText = "Login Failed!";
+            }
+        }
+
+        async function testApi() {
+            const token = document.getElementById("token").value;
+            const response = await fetch('/api/protected', {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            });
+
+            const result = await response.text();
+            document.getElementById("response").innerText = result;
+        }
+    </script>
+</head>
+<body>
+<h2>JWT API Tester</h2>
+
+<h3>Login</h3>
+<input type="text" id="username" placeholder="Username">
+<input type="password" id="password" placeholder="Password">
+<button onclick="login()">Login</button>
+<p id="status"></p>
+
+<h3>API Request</h3>
+<input type="text" id="token" placeholder="JWT Token" readonly>
+<button onclick="testApi()">Test Protected API</button>
+
+<h3>Response</h3>
+<pre id="response"></pre>
+</body>
+</html>
