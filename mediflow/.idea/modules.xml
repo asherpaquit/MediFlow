@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/mediflow.iml" filepath="$PROJECT_DIR$/.idea/mediflow.iml" />
+      <module fileurl="file://$PROJECT_DIR$/mediflow/mediflow.iml" filepath="$PROJECT_DIR$/mediflow/mediflow.iml" />
     </modules>
   </component>
 </project>

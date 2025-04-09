@@ -34,9 +34,10 @@
     "Maven.mediflow [org.springframework.boot:spring-boot-maven-plugin:3.4.2:run].executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "main",
+    "git-widget-placeholder": "<unknown>",
+    "ignore.virus.scanning.warn.message": "true",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/L22X07W23/Documents/New folder/LibLoveLive/mediflow",
+    "last_opened_file_path": "C:/Users/asher/Documents/GitHub/MediFlow/mediflow",
     "settings.editor.selected.configurable": "reference.settings.project.maven.repository.indices"
   }
 }]]></component>
