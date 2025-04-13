@@ -6,6 +6,6 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.Optional;
 
 public interface UserPatientRepository extends MongoRepository<UserPatient, String> {
-    Optional<UserPatient> findByUsername(String username);
     boolean existsByUsername(String username);
+    Optional<UserPatient> findByUsernameAndPassword(String username, String password);
 }

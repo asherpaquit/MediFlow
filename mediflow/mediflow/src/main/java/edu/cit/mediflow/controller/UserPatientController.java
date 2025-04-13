@@ -13,7 +13,6 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/user-patients")
 public class UserPatientController {
-
     @Autowired
     private UserPatientService userPatientService;
 
@@ -49,4 +48,17 @@ public class UserPatientController {
         userPatientService.deleteUserPatient(id);
         return ResponseEntity.noContent().build();
     }
+
+
+@PostMapping("/login")
+public ResponseEntity<?> login(@RequestBody UserPatient credentials) {
+    Optional<UserPatient> user = userPatientService.authenticate(credentials.getUsername(), credentials.getPassword());
+
+    if (user.isPresent()) {
+        return ResponseEntity.ok(user.get());
+    } else {
+        return ResponseEntity.status(401).body("Invalid username or password");
+        }
+    }
 }
+

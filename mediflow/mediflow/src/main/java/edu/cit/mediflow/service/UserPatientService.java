@@ -22,10 +22,6 @@ public class UserPatientService {
         return userPatientRepository.findById(id);
     }
 
-    public Optional<UserPatient> getUserPatientByUsername(String username) {
-        return userPatientRepository.findByUsername(username);
-    }
-
     public UserPatient createUserPatient(UserPatient userPatient) {
         return userPatientRepository.save(userPatient);
     }
@@ -40,5 +36,9 @@ public class UserPatientService {
 
     public void deleteUserPatient(String id) {
         userPatientRepository.deleteById(id);
+    }
+
+    public Optional<UserPatient> authenticate(String username, String password) {
+        return userPatientRepository.findByUsernameAndPassword(username, password);
     }
 }
