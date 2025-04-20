@@ -4,8 +4,8 @@ FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 
 # Copy only the pom.xml and dependency files first to leverage Docker caching
-COPY pom.xml /app/
-COPY src /app/src
+COPY ./mediflow/mediflow/pom.xml /app/
+COPY ./mediflow/mediflow/src /app/src
 
 # Run Maven to build the application
 RUN mvn clean package -DskipTests
