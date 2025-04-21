@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const adminlogin = () => {
+const AdminLogin = () => {
   const [credentials, setCredentials] = useState({
     username: '',
     password: ''
@@ -29,16 +29,18 @@ const adminlogin = () => {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(credentials)
+        body: JSON.stringify({
+          username: credentials.username,
+          password: credentials.password
+        })
       });
 
       if (!response.ok) {
-        throw new Error('Invalid admin credentials');
+        const errorText = await response.text();
+        throw new Error(errorText || 'Invalid admin credentials');
       }
 
       const adminData = await response.json();
-
-      // Store admin data in session
       sessionStorage.setItem('adminData', JSON.stringify(adminData));
       sessionStorage.setItem('isAdminAuthenticated', 'true');
 
@@ -117,4 +119,4 @@ const adminlogin = () => {
   );
 };
 
-export default adminlogin;
+export default AdminLogin;
