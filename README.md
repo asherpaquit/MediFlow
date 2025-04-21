@@ -1,24 +1,12 @@
-# IT342-G5-LibLoveLive
-A Systems Integration Project
+# React + Vite
 
- feature-myprofile
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-# TEAM MEMBERS:
-### MEMBER1
-### NAME: ASHER CALEB N. PAQUIT
-### COURSE & YEAR: BSIT - 3
+Currently, two official plugins are available:
 
-#### I am Asher Caleb N. Paquit, A 3rd year BSIT Student, I live in San Fernando Cebu, I like to go to the Gym because that's what I like to do, because pain in <br>
-#### the body calms the pain the mind --char. Fun fact about me is that I am a BSCS student back then and I really found CS difficult so I switch to IT, and found out <br>
-#### also they have the same difficulty, in my journey as a IT student I find knowing Game and Web development really interesting and so that is where I invest my <br>
-#### time seldomly since I often found coding really rigorous and at the same time fun. Entering 3rd year BSIT i hope I will learn even more in the spectrum of coding<br>
-#### with my spectacular professors and advisers, and experience the beauty of having a capstone and research to accomplish.
-=======
-Team Member:
-Member
-NAME:VINCENT PAUL DUMANGCAS
-COURSE & YEAR: BSIT-3
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-I AM VINCENT PAUL DUMANGCAS AND I AM BSIT 3 STUDENT I SEE MYSELF AS A BACKEND DEVELOPER BECAUSE I ALWAYS COOPERATE BEHIND THE SCENES I HOPE I CAN WORK SUCCESSFULLY WITH MY
-GROUP
+## Expanding the ESLint configuration
 
+If you are developing a production application, we recommend using TypeScript and enable type-aware lint rules. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
