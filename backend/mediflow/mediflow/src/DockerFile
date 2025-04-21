@@ -4,7 +4,7 @@ FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 
 # Copy the necessary files to build
-COPY pom.xml .
+COPY [pom.xml](http://_vscodecontentref_/4) .
 COPY src ./src
 
 # Package the application without tests
@@ -23,67 +23,3 @@ EXPOSE 8080
 
 # Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
-
-
-## Attempt 3
-# # Stage 1: Build the application
-# FROM maven:3.9.6-eclipse-temurin-21 AS build
-
-# WORKDIR /app
-
-# # Copy only the pom.xml and dependency files first to leverage Docker caching
-# COPY mediflow/mediflow/pom.xml /app/
-# COPY mediflow/mediflow/src /app/src
-
-# # Run Maven to build the application
-# RUN mvn clean package -DskipTests
-
-# # Stage 2: Run the application
-# FROM eclipse-temurin:21-jdk
-
-# WORKDIR /app
-
-# # Copy the built JAR file from the build stage
-# COPY --from=build /app/target/mediflow-0.0.1-SNAPSHOT.jar app.jar
-
-# # Expose the application port
-# EXPOSE 8080
-
-# # Run the application
-# ENTRYPOINT ["java", "-jar", "app.jar"]
-
-## Attempt 2
-# # Stage 1: Build the application
-# FROM maven:3.9.6-eclipse-temurin-21 AS build
-
-# WORKDIR /app
-# COPY . .
-# RUN mvn clean package -DskipTests
-
-# # Stage 2: Run the application
-# FROM eclipse-temurin:21-jdk
-
-# WORKDIR /app
-# COPY --from=build /app/target/mediflow-0.0.1-SNAPSHOT.jar app.jar
-
-# EXPOSE 8080
-
-# ENTRYPOINT ["java", "-jar", "app.jar"]
-
-## attempt 1
-# # Stage 1: Build the application
-# FROM maven:3.9.5-openjdk-21 AS build
-
-# WORKDIR /app
-# COPY . .
-# RUN mvn clean package -DskipTests
-
-# # Stage 2: Run the application
-# FROM openjdk:21-jdk-slim
-
-# WORKDIR /app
-# COPY --from=build /app/target/mediflow-0.0.1-SNAPSHOT.jar app.jar
-
-# EXPOSE 8080
-
-# ENTRYPOINT ["java", "-jar", "app.jar"]
