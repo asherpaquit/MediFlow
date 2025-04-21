@@ -4,8 +4,8 @@ FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 
 # Copy the necessary files to build
-COPY [pom.xml](http://_vscodecontentref_/4) .
-COPY src ./src
+COPY ./mediflow/mediflow/pom.xml /app/
+COPY ./mediflow/mediflow/src /app/src
 
 # Package the application without tests
 RUN mvn clean package -DskipTests
@@ -23,3 +23,28 @@ EXPOSE 8080
 
 # Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
+# # Stage 1: Build the application
+# FROM maven:3.9.6-eclipse-temurin-21 AS build
+
+# WORKDIR /app
+
+# # Copy the necessary files to build
+# COPY [pom.xml](http://_vscodecontentref_/4) .
+# COPY src ./src
+
+# # Package the application without tests
+# RUN mvn clean package -DskipTests
+
+# # Stage 2: Run the application
+# FROM eclipse-temurin:21-jdk
+
+# WORKDIR /app
+
+# # Copy the jar built in stage 1
+# COPY --from=build /app/target/mediflow-0.0.1-SNAPSHOT.jar app.jar
+
+# # Expose the port
+# EXPOSE 8080
+
+# # Run the application
+# ENTRYPOINT ["java", "-jar", "app.jar"]
