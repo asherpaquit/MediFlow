@@ -9,6 +9,9 @@ COPY .mvn/ .mvn
 COPY mvnw .
 COPY pom.xml .
 
+# Grant execute permissions to the Maven wrapper
+RUN chmod +x mvnw
+
 # Download dependencies
 RUN ./mvnw dependency:go-offline -B
 
@@ -24,4 +27,4 @@ EXPOSE 8080
 # Run the application
 CMD ["java", "-jar", "target/springboot-mysql-demo-0.0.1-SNAPSHOT.jar"]
 
-#gamay nga code added update
+#changes
