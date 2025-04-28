@@ -23,10 +23,10 @@ const Login = () => {
     setError('');
     setIsLoading(true);
 
-    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+    const API_URL = process.env.REACT_APP_API_URL || 'https://mediflow-s7af.onrender.com';
 
     try {
-      const response = await fetch(`${API_URL}/api/user-patients/login`, {
+      const response = await fetch(`https://mediflow-s7af.onrender.com/api/user-patients/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
