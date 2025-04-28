@@ -24,7 +24,7 @@ const DoctorLogin = () => {
     setIsLoading(true);
   
     try {
-      const response = await fetch('http://localhost:8080/api/user-doctors/login', {
+      const response = await fetch('https://mediflow-s7af.onrender.com/api/user-doctors/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -42,7 +42,7 @@ const DoctorSignup2 = () => {
         };
 
         try {
-            const response = await fetch('http://localhost:8080/api/user-doctors', {
+            const response = await fetch('https://mediflow-s7af.onrender.com/api/user-doctors', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
