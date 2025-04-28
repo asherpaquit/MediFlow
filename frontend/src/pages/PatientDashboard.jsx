@@ -108,7 +108,7 @@ const PatientDashboard = () => {
         const fetchDoctors = async () => {
             setFetchDoctorsStatus({ loading: true, error: null });
             try {
-                const response = await fetch('http://localhost:8080/api/user-doctors');
+                const response = await fetch('https://mediflow-s7af.onrender.com/api/user-doctors');
                 if (response.ok) {
                     const data = await response.json();
                     setDoctors(data);
