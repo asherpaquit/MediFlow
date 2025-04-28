@@ -48,7 +48,7 @@ const PatientSignup2 = () => {
       };
       
 
-      const response = await fetch('http://localhost:8080/api/user-patients', {
+      const response = await fetch('https://mediflow-s7af.onrender.com/api/user-patients', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
