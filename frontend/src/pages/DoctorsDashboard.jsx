@@ -82,20 +82,6 @@ const DoctorsDashboard = () => {
     }
   };
 
-  // Fetch notifications for this doctor
-  const fetchNotifications = async (doctorId) => {
-    try {
-      setIsLoading(prev => ({ ...prev, notifications: true }));
-      const response = await fetch(`/api/notifications?userId=${doctorId}&role=doctor`);
-      if (!response.ok) throw new Error('Failed to fetch notifications');
-      const data = await response.json();
-      setNotifications(data);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    } finally {
-      setIsLoading(prev => ({ ...prev, notifications: false }));
-    }
-  };
 
   // Handle appointment status change (accept/decline)
   const handleAppointmentAction = async (appointmentId, action) => {
