@@ -78,8 +78,14 @@ const PatientDashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-    // --- Dummy/Initial Data (Replace with API calls eventually) ---
     const [upcomingAppointments, setUpcomingAppointments] = useState([]);
+        useEffect(() => {
+            const savedAppointments = JSON.parse(sessionStorage.getItem('appointments'));
+            if (savedAppointments && Array.isArray(savedAppointments)) {
+                setUpcomingAppointments(savedAppointments);
+            }
+        }, []);
+
     const [medicalRecords] = useState([
         { id: 1, date: '2025-04-10', doctor: 'Dr. Sarah Johnson', diagnosis: 'Hypertension', prescription: 'Lisinopril 10mg daily' },
         { id: 2, date: '2025-02-22', doctor: 'Dr. Emily Wong', diagnosis: 'Annual Checkup', prescription: 'None' }
@@ -130,7 +136,11 @@ const PatientDashboard = () => {
 
     // --- Handlers ---
     const handleLogout = () => {
-        sessionStorage.clear();
+        const savedAppointments = sessionStorage.getItem('appointments');
+    sessionStorage.clear();
+    if (savedAppointments) {
+        sessionStorage.setItem('appointments', savedAppointments);
+    }
         navigate('/login');
     };
 
@@ -215,13 +225,26 @@ const PatientDashboard = () => {
 
             if (response.ok) {
                 const newAppointment = await response.json();
+                const doctor = doctors.find(d => d.doctorId === newAppointment.doctorId);
+                const formattedAppointment = {
+                    ...newAppointment,
+                    doctor: `${doctors.find(d => d.doctorId === newAppointment.doctorId)?.firstname || 'Unknown'} 
+                    ${doctors.find(d => d.doctorId === newAppointment.doctorId)?.lastname || 'Doctor'}`,
+                    status: 'Pending'
+                };
+            
+                const updatedAppointments = [...upcomingAppointments, formattedAppointment];
+            
                 setBookingStatus({ loading: false, error: null, success: 'Appointment booked successfully!' });
-                setUpcomingAppointments(prev => [...prev, { ...newAppointment, doctor: doctors.find(d => d.doctorId === newAppointment.doctorId)?.lastname || 'Unknown Doctor' }]);
+                setUpcomingAppointments(updatedAppointments);
+                sessionStorage.setItem('appointments', JSON.stringify(updatedAppointments));
+            
                 setSelectedDoctorId('');
                 setAppointmentDate('');
                 setAppointmentTime('');
                 setAppointmentReason('');
                 setTimeout(() => setBookingStatus(prev => ({ ...prev, success: null })), 5000);
+            
             } else {
                 const errorData = await response.json();
                 const errorMessage = errorData?.message || errorData || 'Failed to book appointment.';
