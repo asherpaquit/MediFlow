@@ -500,7 +500,7 @@ const PatientDashboard = () => {
                                                 {doctors.length > 0 ? (
                                                     doctors.map((doctor) => (
                                                         <option key={doctor.doctorId} value={doctor.doctorId}>
-                                                            Dr. {doctor.firstName} {doctor.lastName} ({doctor.specialization || 'General Practice'})
+                                                            Dr. {doctor.firstname} {doctor.lastname} ({doctor.specialization || 'General Practice'})
                                                         </option>
                                                     ))
                                                 ) : (
