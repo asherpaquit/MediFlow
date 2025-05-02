@@ -20,48 +20,55 @@ const DoctorSignup2 = () => {
         }));
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
 
-        // Password validation
-        if (formData.password !== formData.confirmPassword) {
-            alert('Passwords do not match!');
-            return;
-        }
-        if (!/^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/.test(formData.password)) {
-            alert('Password must be at least 8 characters with 1 number and 1 special character');
-            return;
-        }
-
-        // Combine data from both steps
-        const doctorData = {
-            ...step1Data,
-            username: formData.username,
-            password: formData.password,
-            taskNumber: formData.taskNumber
-        };
-
-        try {
-            const response = await fetch('https://mediflow-s7af.onrender.com/api/user-doctors', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(doctorData),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to register doctor');
-            }
-
-            sessionStorage.removeItem('doctorSignupStep1');
-            navigate('/login', { state: { registrationSuccess: true } });
-        } catch (error) {
-            console.error(error);
-            alert(error.message || 'Registration failed. Please try again.');
-        }
+const handleSubmit = async (e) => {
+    e.preventDefault();
+  
+    // Password validation
+    if (formData.password !== formData.confirmPassword) {
+      alert('Passwords do not match!');
+      return;
+    }
+    if (!/^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/.test(formData.password)) {
+      alert('Password must be at least 8 characters with 1 number and 1 special character');
+      return;
+    }
+  
+    // Combine data from both steps
+    const doctorData = {
+      ...step1Data,
+      username: formData.username,
+      password: formData.password,
+      taskNumber: formData.taskNumber
     };
+  
+    try {
+      const response = await fetch('https://mediflow-s7af.onrender.com/api/user-doctors', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(doctorData),
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to register doctor');
+      }
+  
+      const result = await response.json();
+      
+      // Store the received token and doctor data
+      localStorage.setItem('token', result.token);
+      sessionStorage.setItem('doctorData', JSON.stringify(result.doctor));
+      
+      sessionStorage.removeItem('doctorSignupStep1');
+      navigate('/doctor-dashboard', { state: { registrationSuccess: true } });
+    } catch (error) {
+      console.error(error);
+      alert(error.message || 'Registration failed. Please try again.');
+    }
+  };
 
     return (
         <div className="min-h-screen bg-gray-50">
