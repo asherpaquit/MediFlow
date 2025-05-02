@@ -9,7 +9,6 @@ import {
   ChartBarIcon,
   CogIcon,
   LogoutIcon,
-  BellIcon,
   SearchIcon,
   CameraIcon,
   ChevronDownIcon,
@@ -26,68 +25,26 @@ const DoctorsDashboard = () => {
   const [doctorData, setDoctorData] = useState(null);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [patientRecords, setPatientRecords] = useState([]);
-  const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState({
     initial: true,
     appointments: false,
-    patients: false,
-    notifications: false
+    patients: false
   });
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [appointmentFilter, setAppointmentFilter] = useState('all');
   const [appointmentNotes, setAppointmentNotes] = useState('');
 
-  // Fetch doctor data and appointments on component mount
-  useEffect(() => {
-    const storedData = sessionStorage.getItem('doctorData');
-    if (storedData) {
-      try {
-        const parsedData = JSON.parse(storedData);
-        if (parsedData && parsedData.id) {
-          setDoctorData(parsedData);
-          fetchInitialData(parsedData.id);
-        } else {
-          navigate('/login');
-        }
-      } catch (error) {
-        console.error('Error parsing doctor data:', error);
-        navigate('/login');
-      }
-    } else {
-      navigate('/login');
-    }
-  }, [navigate]);
-
-  const fetchInitialData = async (doctorId) => {
-    try {
-      setIsLoading(prev => ({ ...prev, initial: true }));
-      await Promise.all([
-        fetchDoctorAppointments(doctorId),
-        fetchPatientsWithAppointments(doctorId),
-        fetchNotifications(doctorId)
-      ]);
-    } catch (error) {
-      console.error('Error fetching initial data:', error);
-    } finally {
-      setIsLoading(prev => ({ ...prev, initial: false }));
-    }
-  };
-
-  // Fetch appointments for this specific doctor with proper error handling
+  // Fetch functions
   const fetchDoctorAppointments = async (doctorId) => {
     try {
       setIsLoading(prev => ({ ...prev, appointments: true }));
       const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments?doctorId=${doctorId}`);
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error('Failed to fetch appointments');
       
       const data = await response.json();
       
-      // Normalize appointment data
       const normalizedAppointments = Array.isArray(data) ? data.map(appt => ({
         id: appt.id || appt._id || '',
         patientName: appt.patientName || 
@@ -109,19 +66,15 @@ const DoctorsDashboard = () => {
     }
   };
 
-  // Fetch patients with proper error handling
   const fetchPatientsWithAppointments = async (doctorId) => {
     try {
       setIsLoading(prev => ({ ...prev, patients: true }));
       const response = await fetch(`https://mediflow-s7af.onrender.com/api/user-patients?doctorId=${doctorId}`);
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error('Failed to fetch patients');
       
       const data = await response.json();
       
-      // Normalize patient data
       const normalizedPatients = Array.isArray(data) ? data.map(patient => ({
         id: patient.id || patient._id || '',
         name: patient.name || 
@@ -144,27 +97,99 @@ const DoctorsDashboard = () => {
     }
   };
 
-  // Fetch notifications with proper error handling
-  const fetchNotifications = async (doctorId) => {
+  const fetchInitialData = async (doctorId) => {
     try {
-      setIsLoading(prev => ({ ...prev, notifications: true }));
-      const response = await fetch(`/api/notifications?userId=${doctorId}&role=doctor`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      setNotifications(Array.isArray(data) ? data : []);
+      setIsLoading(prev => ({ ...prev, initial: true }));
+      await Promise.all([
+        fetchDoctorAppointments(doctorId),
+        fetchPatientsWithAppointments(doctorId)
+      ]);
     } catch (error) {
-      console.error('Error fetching notifications:', error);
-      setNotifications([]);
+      console.error('Error fetching initial data:', error);
     } finally {
-      setIsLoading(prev => ({ ...prev, notifications: false }));
+      setIsLoading(prev => ({ ...prev, initial: false }));
     }
   };
 
-  // Safe filtering functions
+  // Handle appointment status change
+  const handleAppointmentAction = async (appointmentId, action) => {
+    try {
+      const appointmentToUpdate = upcomingAppointments.find(a => a.id === appointmentId);
+      if (!appointmentToUpdate) throw new Error('Appointment not found');
+
+      // Optimistic UI update
+      setUpcomingAppointments(prev =>
+        prev.map(appt =>
+          appt.id === appointmentId
+            ? { ...appt, status: action === 'accept' ? 'Confirmed' : 'Declined' }
+            : appt
+        )
+      );
+
+      const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/${appointmentId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: action === 'accept' ? 'Confirmed' : 'Declined',
+          doctorId: doctorData.id
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update appointment');
+
+      // Refresh data
+      fetchDoctorAppointments(doctorData.id);
+    } catch (error) {
+      console.error('Error updating appointment:', error);
+      // Revert on error
+      setUpcomingAppointments(prev =>
+        prev.map(appt =>
+          appt.id === appointmentId
+            ? { ...appt, status: appointmentToUpdate?.status || 'Pending' }
+            : appt
+        )
+      );
+    }
+  };
+
+  // Update appointment notes
+  const updateAppointmentNotes = async (appointmentId, notes) => {
+    try {
+      const response = await fetch(`/api/appointments/${appointmentId}/notes`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notes,
+          doctorId: doctorData.id
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update notes');
+
+      // Update local state
+      setUpcomingAppointments(prev =>
+        prev.map(appt =>
+          appt.id === appointmentId
+            ? { ...appt, notes }
+            : appt
+        )
+      );
+    } catch (error) {
+      console.error('Error updating appointment notes:', error);
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('doctorData');
+    sessionStorage.removeItem('isAuthenticated');
+    navigate('/login');
+  };
+
+  // Filter functions
   const filteredAppointments = upcomingAppointments.filter(appt => {
     try {
       return (
@@ -192,99 +217,26 @@ const DoctorsDashboard = () => {
     }
   });
 
-  // Handle appointment status change with proper error handling
-  const handleAppointmentAction = async (appointmentId, action) => {
-    try {
-      const appointmentToUpdate = upcomingAppointments.find(a => a.id === appointmentId);
-      if (!appointmentToUpdate) {
-        throw new Error('Appointment not found');
+  // Initial data loading
+  useEffect(() => {
+    const storedData = sessionStorage.getItem('doctorData');
+    if (storedData) {
+      try {
+        const parsedData = JSON.parse(storedData);
+        if (parsedData && parsedData.id) {
+          setDoctorData(parsedData);
+          fetchInitialData(parsedData.id);
+        } else {
+          navigate('/login');
+        }
+      } catch (error) {
+        console.error('Error parsing doctor data:', error);
+        navigate('/login');
       }
-
-      // Optimistic UI update
-      setUpcomingAppointments(prev =>
-        prev.map(appt =>
-          appt.id === appointmentId
-            ? { ...appt, status: action === 'accept' ? 'Confirmed' : 'Declined' }
-            : appt
-        )
-      );
-
-      const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/${appointmentId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: action === 'accept' ? 'Confirmed' : 'Declined',
-          doctorId: doctorData.id
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update appointment status');
-      }
-
-      // Add notification
-      const newNotification = {
-        id: Date.now(),
-        message: `You ${action === 'accept' ? 'accepted' : 'declined'} appointment with ${appointmentToUpdate.patientName || 'a patient'}`,
-        time: 'Just now',
-        read: false,
-        type: 'appointment_update'
-      };
-      setNotifications(prev => [newNotification, ...prev]);
-
-      // Refresh data
-      fetchDoctorAppointments(doctorData.id);
-    } catch (error) {
-      console.error('Error updating appointment:', error);
-      // Revert on error
-      setUpcomingAppointments(prev =>
-        prev.map(appt =>
-          appt.id === appointmentId
-            ? { ...appt, status: appointmentToUpdate?.status || 'Pending' }
-            : appt
-        )
-      );
+    } else {
+      navigate('/login');
     }
-  };
-
-  // Update appointment notes with proper error handling
-  const updateAppointmentNotes = async (appointmentId, notes) => {
-    try {
-      const response = await fetch(`/api/appointments/${appointmentId}/notes`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          notes,
-          doctorId: doctorData.id
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update notes');
-      }
-
-      // Update local state
-      setUpcomingAppointments(prev =>
-        prev.map(appt =>
-          appt.id === appointmentId
-            ? { ...appt, notes }
-            : appt
-        )
-      );
-    } catch (error) {
-      console.error('Error updating appointment notes:', error);
-    }
-  };
-
-  const handleLogout = () => {
-    sessionStorage.removeItem('doctorData');
-    sessionStorage.removeItem('isAuthenticated');
-    navigate('/login');
-  };
+  }, [navigate]);
 
   if (isLoading.initial || !doctorData) {
     return (
