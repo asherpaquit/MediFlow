@@ -61,6 +61,57 @@ const DoctorsDashboard = () => {
     fetchDoctorData();
   }, [navigate]);
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('doctorData');
+    navigate('/login');
+  };
+
+  const handleUpdateProfile = async (updatedData) => {
+    try {
+      const response = await fetch(
+        `https://mediflow-s7af.onrender.com/api/user-doctors/${doctorData.id}`, 
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify(updatedData)
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+      
+      const data = await response.json();
+      setDoctorData(data);
+      sessionStorage.setItem('doctorData', JSON.stringify(data));
+      return true;
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      return false;
+    }
+  };
+
+  const filteredAppointments = upcomingAppointments.filter(appt => 
+    appt.patient?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredPatients = patientRecords.filter(patient => 
+    patient.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (isLoading || !doctorData) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
