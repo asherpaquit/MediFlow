@@ -191,7 +191,7 @@ const DoctorsDashboard = () => {
               </button>
               <div className="flex items-center">
                 <div className="ml-3">
-                  <div className="text-sm font-medium text-gray-700">Dr. {doctorData.username}</div>
+                  <div className="text-sm font-medium text-gray-700">Dr. {doctorData.firstName} {doctorData.LastName}</div>
                   <div className="text-xs text-gray-500">{doctorData.specialization}</div>
                 </div>
                 <UserCircleIcon className="w-8 h-8 ml-2 text-gray-400" />
