@@ -34,38 +34,32 @@ const DoctorsDashboard = () => {
       navigate('/login');
     }
   }, [navigate]);
+
   const fetchDoctorAppointments = async (doctorId) => {
+    if (!doctorId) {
+      console.error('No doctorId provided');
+      return;
+    }
+    
     setIsLoading(true);
     try {
-      if (!doctorId) {
-        console.error("Error: doctorId is undefined in fetchDoctorAppointments");
-        setIsLoading(false);
-        return; 
-      }
-
       const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-
+      
       if (!response.ok) {
-        // Log the error response for debugging on the server-side
-        const errorText = await response.text();
-        console.error(`HTTP Error ${response.status}: ${errorText}`);
-        throw new Error(`Failed to fetch appointments (HTTP ${response.status})`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
+      
       const data = await response.json();
-      console.log("Fetched Appointments Data:", data);
       setUpcomingAppointments(data);
-      setIsLoading(false);
-
     } catch (error) {
-      console.error("Error fetching appointments:", error);
+      console.error('Error fetching appointments:', error);
+      // Optionally show error to user
+    } finally {
       setIsLoading(false);
-      // Optionally, you might want to show a user-friendly error message here
-      // depending on your UI's error handling strategy.
     }
   };
 
