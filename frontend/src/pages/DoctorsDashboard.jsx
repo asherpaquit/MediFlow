@@ -71,7 +71,7 @@ const DoctorsDashboard = () => {
   const fetchPatientsWithAppointments = async (doctorId) => {
     try {
       setIsLoading(prev => ({ ...prev, patients: true }));
-      const response = await fetch(`https://mediflow-s7af.onrender.com/api/userpatients?doctorId=${doctorId}`);
+      const response = await fetch(`https://mediflow-s7af.onrender.com/api/user-patients?doctorId=${doctorId}`);
       if (!response.ok) throw new Error('Failed to fetch patients');
       const data = await response.json();
       setPatientRecords(data);
