@@ -27,38 +27,14 @@ const DoctorsDashboard = () => {
   
 
   useEffect(() => {
-    const fetchDoctorData = async () => {
-      setIsLoading(true);
-      try {
-        // Check session storage first
-        const storedData = sessionStorage.getItem('doctorData');
-        if (storedData) {
-          setDoctorData(JSON.parse(storedData));
-        } else {
-          // Fetch from API if not in session storage
-          const response = await fetch('https://mediflow-s7af.onrender.com/api/user-doctors/me', {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-          });
-          
-          if (!response.ok) {
-            throw new Error('Failed to fetch doctor data');
-          }
-          
-          const data = await response.json();
-          setDoctorData(data);
-          sessionStorage.setItem('doctorData', JSON.stringify(data));
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        navigate('/login');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchDoctorData();
+    // Get doctor data from session storage
+    const storedData = sessionStorage.getItem('doctorData');
+    if (storedData) {
+      setDoctorData(JSON.parse(storedData));
+    } else {
+      // If no doctor data found, redirect to login
+      navigate('/login');
+    }
   }, [navigate]);
 
   const handleLogout = () => {
