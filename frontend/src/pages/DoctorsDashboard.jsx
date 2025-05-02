@@ -13,6 +13,7 @@ import {
   SearchIcon,
   CameraIcon
 } from '@heroicons/react/outline';
+import { fetchDoctorAppointments, updateAppointmentStatus } from '../services/appointmentService';
 
 const DoctorsDashboard = () => {
   const navigate = useNavigate();
@@ -23,71 +24,58 @@ const DoctorsDashboard = () => {
   const [appointments, setAppointments] = useState([]);
   const [patients, setPatients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const storedData = sessionStorage.getItem('doctorData');
-    if (storedData) {
-      const doctor = JSON.parse(storedData);
-      setDoctorData(doctor);
-      fetchDoctorAppointments(doctor.id);
-    } else {
-      navigate('/login');
-    }
+    const loadDoctorData = async () => {
+      const storedData = sessionStorage.getItem('doctorData');
+      if (!storedData) {
+        navigate('/login');
+        return;
+      }
+
+      try {
+        const doctor = JSON.parse(storedData);
+        setDoctorData(doctor);
+        await loadAppointments(doctor.doctorId);
+      } catch (err) {
+        setError('Failed to load doctor data');
+        console.error(err);
+      }
+    };
+
+    loadDoctorData();
   }, [navigate]);
 
-  const API_BASE = 'https://mediflow-s7af.onrender.com';
-  const fetchDoctorAppointments = async (doctorId) => {
+  const loadAppointments = async (doctorId) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${API_BASE}/api/appointments?doctorId=${doctorId}`);
-      const data = await response.json();
+      setError(null);
+      const data = await fetchDoctorAppointments(doctorId);
+      setAppointments(data);
       
-      if (response.ok) {
-        setAppointments(data.appointments);
-        const uniquePatients = data.appointments.reduce((acc, appointment) => {
-          if (!acc.some(p => p.id === appointment.patient.id)) {
-            acc.push(appointment.patient);
-          }
-          return acc;
-        }, []);
-        setPatients(uniquePatients);
-      } else {
-        console.error('Failed to fetch appointments:', data.message);
-      }
-    } catch (error) {
-      console.error('Error fetching appointments:', error);
+      const uniquePatients = data.reduce((acc, appt) => {
+        if (!acc.some(p => p.id === appt.patient.id)) {
+          acc.push(appt.patient);
+        }
+        return acc;
+      }, []);
+      setPatients(uniquePatients);
+    } catch (err) {
+      setError('Failed to load appointments');
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('doctorData');
-    sessionStorage.removeItem('isAuthenticated');
-    navigate('/login');
-  };
-
   const handleAppointmentAction = async (appointmentId, action) => {
     try {
-      const response = await fetch(`${API_BASE}/api/appointments/${appointmentId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: action }),
-      });
-
-      if (response.ok) {
-        setAppointments(prevAppointments =>
-          prevAppointments.map(appt =>
-            appt.id === appointmentId ? { ...appt, status: action } : appt
-          )
-        );
-      } else {
-        console.error('Failed to update appointment status');
-      }
-    } catch (error) {
-      console.error('Error updating appointment:', error);
+      await updateAppointmentStatus(appointmentId, action);
+      await loadAppointments(doctorData.doctorId);
+    } catch (err) {
+      setError(`Failed to ${action} appointment`);
+      console.error(err);
     }
   };
 
@@ -99,8 +87,18 @@ const DoctorsDashboard = () => {
     patient.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const todaysAppointments = appointments.filter(appt => {
+    const appointmentDate = new Date(appt.date);
+    const today = new Date();
+    return (
+      appointmentDate.getDate() === today.getDate() &&
+      appointmentDate.getMonth() === today.getMonth() &&
+      appointmentDate.getFullYear() === today.getFullYear()
+    );
+  });
+
   if (!doctorData) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+    return <div className="flex justify-center items-center h-screen">Loading doctor data...</div>;
   }
 
   if (isLoading) {
@@ -141,7 +139,11 @@ const DoctorsDashboard = () => {
           </div>
           <div className="p-4 border-t border-gray-200">
             <button
-              onClick={handleLogout}
+              onClick={() => {
+                sessionStorage.removeItem('doctorData');
+                sessionStorage.removeItem('token');
+                navigate('/login');
+              }}
               className="flex items-center w-full px-4 py-3 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-100"
             >
               <LogoutIcon className="w-5 h-5 mr-3" />
@@ -230,7 +232,11 @@ const DoctorsDashboard = () => {
                 </div>
                 <div className="p-4 border-t border-gray-200">
                   <button
-                    onClick={handleLogout}
+                    onClick={() => {
+                      sessionStorage.removeItem('doctorData');
+                      sessionStorage.removeItem('token');
+                      navigate('/login');
+                    }}
                     className="flex items-center w-full px-4 py-3 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-100"
                   >
                     <LogoutIcon className="w-5 h-5 mr-3" />
@@ -244,13 +250,19 @@ const DoctorsDashboard = () => {
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto p-4">
+          {error && (
+            <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+              {error}
+            </div>
+          )}
+
           {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard 
                   title="Today's Appointments" 
-                  value={appointments.filter(a => new Date(a.date).toDateString() === new Date().toDateString()).length} 
+                  value={todaysAppointments.length} 
                   icon={CalendarIcon} 
                   color="blue" 
                 />
@@ -271,14 +283,11 @@ const DoctorsDashboard = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white shadow rounded-lg overflow-hidden">
                   <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                    <h3 className="text-lg font-medium text-gray-900">Upcoming Appointments</h3>
+                    <h3 className="text-lg font-medium text-gray-900">Today's Appointments</h3>
                   </div>
                   <div className="divide-y divide-gray-200">
-                    {appointments
-                      .filter(a => new Date(a.date) >= new Date())
-                      .sort((a, b) => new Date(a.date) - new Date(b.date))
-                      .slice(0, 3)
-                      .map((appt) => (
+                    {todaysAppointments.length > 0 ? (
+                      todaysAppointments.slice(0, 3).map((appt) => (
                         <div key={appt.id} className="p-4 hover:bg-gray-50 transition-colors">
                           <div className="flex justify-between">
                             <div>
@@ -299,7 +308,12 @@ const DoctorsDashboard = () => {
                             </div>
                           </div>
                         </div>
-                      ))}
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-500">
+                        No appointments today
+                      </div>
+                    )}
                   </div>
                   <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 text-right">
                     <button 
@@ -321,10 +335,10 @@ const DoctorsDashboard = () => {
                         <div className="flex justify-between">
                           <div>
                             <p className="font-medium">{patient.name}</p>
-                            <p className="text-sm text-gray-500">{patient.condition || 'No condition specified'}</p>
+                            <p className="text-sm text-gray-500">{patient.condition}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm">Last visit: {patient.lastVisit || 'N/A'}</p>
+                            <p className="text-sm">{patient.email}</p>
                           </div>
                         </div>
                       </div>
@@ -346,60 +360,59 @@ const DoctorsDashboard = () => {
           {/* Appointments Tab */}
           {activeTab === 'appointments' && (
             <div className="bg-white shadow rounded-lg overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                <h3 className="text-lg font-medium text-gray-900">Appointments</h3>
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h3 className="text-lg font-medium text-gray-900">All Appointments</h3>
               </div>
               <div className="divide-y divide-gray-200">
                 {filteredAppointments.length > 0 ? (
-                  filteredAppointments
-                    .sort((a, b) => new Date(a.date) - new Date(b.date))
-                    .map((appt) => (
-                      <div key={appt.id} className="p-4 hover:bg-gray-50 transition-colors">
-                        <div className="flex flex-col sm:flex-row justify-between">
-                          <div className="mb-2 sm:mb-0">
-                            <p className="font-medium">{appt.patient.name}</p>
-                            <p className="text-sm text-gray-500">{appt.type}</p>
-                          </div>
-                          <div className="flex flex-col sm:items-end">
-                            <div className="flex items-center text-sm text-gray-500 mb-1">
-                              <CalendarIcon className="w-4 h-4 mr-1" />
-                              {appt.date}
-                            </div>
-                            <div className="flex items-center text-sm text-gray-500">
-                              <ClockIcon className="w-4 h-4 mr-1" />
-                              {appt.time}
-                            </div>
-                          </div>
+                  filteredAppointments.map((appt) => (
+                    <div key={appt.id} className="p-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex flex-col sm:flex-row justify-between">
+                        <div className="mb-2 sm:mb-0">
+                          <p className="font-medium">{appt.patient.name}</p>
+                          <p className="text-sm text-gray-500">{appt.type}</p>
+                          {appt.notes && <p className="text-xs text-gray-400 mt-1">Notes: {appt.notes}</p>}
                         </div>
-                        <div className="mt-2 flex justify-between items-center">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                            appt.status === 'confirmed' 
-                              ? 'bg-green-100 text-green-800' 
-                              : appt.status === 'pending'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-red-100 text-red-800'
-                          }`}>
-                            {appt.status}
-                          </span>
-                          {appt.status === 'pending' && (
-                            <div className="space-x-2">
-                              <button 
-                                onClick={() => handleAppointmentAction(appt.id, 'confirmed')}
-                                className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded hover:bg-green-200"
-                              >
-                                Accept
-                              </button>
-                              <button 
-                                onClick={() => handleAppointmentAction(appt.id, 'declined')}
-                                className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded hover:bg-red-200"
-                              >
-                                Decline
-                              </button>
-                            </div>
-                          )}
+                        <div className="flex flex-col sm:items-end">
+                          <div className="flex items-center text-sm text-gray-500 mb-1">
+                            <CalendarIcon className="w-4 h-4 mr-1" />
+                            {new Date(appt.date).toLocaleDateString()}
+                          </div>
+                          <div className="flex items-center text-sm text-gray-500">
+                            <ClockIcon className="w-4 h-4 mr-1" />
+                            {appt.time}
+                          </div>
                         </div>
                       </div>
-                    ))
+                      <div className="mt-2 flex justify-between items-center">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                          appt.status === 'confirmed' 
+                            ? 'bg-green-100 text-green-800' 
+                            : appt.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-red-100 text-red-800'
+                        }`}>
+                          {appt.status}
+                        </span>
+                        {appt.status === 'pending' && (
+                          <div className="space-x-2">
+                            <button 
+                              onClick={() => handleAppointmentAction(appt.id, 'confirmed')}
+                              className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200"
+                            >
+                              Accept
+                            </button>
+                            <button 
+                              onClick={() => handleAppointmentAction(appt.id, 'declined')}
+                              className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200"
+                            >
+                              Decline
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
                 ) : (
                   <div className="p-8 text-center text-gray-500">
                     No appointments found
@@ -412,8 +425,8 @@ const DoctorsDashboard = () => {
           {/* Patients Tab */}
           {activeTab === 'patients' && (
             <div className="bg-white shadow rounded-lg overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-                <h3 className="text-lg font-medium text-gray-900">Patients</h3>
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h3 className="text-lg font-medium text-gray-900">Patient Records</h3>
               </div>
               <div className="divide-y divide-gray-200">
                 {filteredPatients.length > 0 ? (
@@ -427,19 +440,14 @@ const DoctorsDashboard = () => {
                           <div className="flex items-center justify-between">
                             <p className="font-medium">{patient.name}</p>
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                              {patient.condition || 'No condition'}
+                              {patient.condition}
                             </span>
                           </div>
-                          <div className="mt-1 flex items-center text-sm text-gray-500">
-                            <CalendarIcon className="flex-shrink-0 mr-1 h-4 w-4" />
-                            <span>Last visit: {patient.lastVisit || 'N/A'}</span>
+                          <div className="mt-1 text-sm text-gray-500">
+                            <p>{patient.email}</p>
+                            <p>{patient.phone}</p>
                           </div>
                         </div>
-                      </div>
-                      <div className="mt-3 flex justify-end space-x-2">
-                        <button className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
-                          View History
-                        </button>
                       </div>
                     </div>
                   ))
@@ -463,11 +471,6 @@ const DoctorsDashboard = () => {
                   <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400" />
                   <h3 className="mt-2 text-sm font-medium text-gray-900">No records selected</h3>
                   <p className="mt-1 text-sm text-gray-500">Select a patient to view their medical records</p>
-                  <div className="mt-6">
-                    <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-                      Search Patient Records
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -489,7 +492,7 @@ const DoctorsDashboard = () => {
                         <input type="file" className="hidden" />
                       </label>
                     </div>
-                    <h2 className="mt-4 text-lg font-medium">Dr. {doctorData.firstName} {doctorData.lastName}</h2>
+                    <h2 className="mt-4 text-lg font-medium">Dr. {doctorData.username}</h2>
                     <p className="text-sm text-gray-500">{doctorData.specialization}</p>
                   </div>
 
@@ -499,7 +502,7 @@ const DoctorsDashboard = () => {
                       <input
                         type="email"
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        value={doctorData.email}
+                        value={doctorData.email || ''}
                         readOnly
                       />
                     </div>
@@ -509,7 +512,7 @@ const DoctorsDashboard = () => {
                       <input
                         type="tel"
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        value={doctorData.phone}
+                        value={doctorData.phone || ''}
                         onChange={(e) => setDoctorData({...doctorData, phone: e.target.value})}
                       />
                     </div>
@@ -518,7 +521,7 @@ const DoctorsDashboard = () => {
                       <label className="block text-sm font-medium text-gray-700">Specialization</label>
                       <select 
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        value={doctorData.specialization}
+                        value={doctorData.specialization || ''}
                         onChange={(e) => setDoctorData({...doctorData, specialization: e.target.value})}
                       >
                         <option>Cardiology</option>
@@ -549,6 +552,7 @@ const DoctorsDashboard = () => {
   );
 };
 
+// StatCard Component
 const StatCard = ({ title, value, icon: Icon, color }) => {
   const colorClasses = {
     blue: 'bg-blue-100 text-blue-600',
