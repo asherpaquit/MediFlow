@@ -20,6 +20,9 @@ const DoctorLogin = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    const { username, password } = credentials;
+
     try {
       const response = await fetch('https://mediflow-s7af.onrender.com/api/user-doctors/login', {
         method: 'POST',
@@ -28,20 +31,19 @@ const DoctorLogin = () => {
         },
         body: JSON.stringify({ username, password }),
       });
-  
+
       if (!response.ok) {
         throw new Error('Login failed');
       }
-  
+
       const result = await response.json();
-      
-      // Store the received token and doctor data
       localStorage.setItem('token', result.token);
       sessionStorage.setItem('doctorData', JSON.stringify(result.doctor));
-      
       navigate('/doctor-dashboard');
     } catch (error) {
       setError(error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
