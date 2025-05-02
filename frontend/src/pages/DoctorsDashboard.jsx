@@ -1044,7 +1044,7 @@ const DoctorsDashboard = () => {
                       <button 
                         className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
                         onClick={() => {
-                          sessionStorage.setItem('doctorData', JSON.stringify(doctorData));
+                          localStorage.setItem('doctorData', JSON.stringify(doctorData));
                           // In a real app, you would also update this in the backend
                         }}
                       >
