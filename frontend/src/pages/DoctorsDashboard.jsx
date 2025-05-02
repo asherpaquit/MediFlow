@@ -28,6 +28,7 @@ const DoctorsDashboard = () => {
   const [patientRecords, setPatientRecords] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState({
+    initial: true,
     appointments: false,
     patients: false,
     notifications: false
@@ -42,50 +43,163 @@ const DoctorsDashboard = () => {
   useEffect(() => {
     const storedData = sessionStorage.getItem('doctorData');
     if (storedData) {
-      const parsedData = JSON.parse(storedData);
-      setDoctorData(parsedData);
-      fetchDoctorAppointments(parsedData.id);
-      fetchPatientsWithAppointments(parsedData.id);
-      fetchNotifications(parsedData.id);
+      try {
+        const parsedData = JSON.parse(storedData);
+        if (parsedData && parsedData.id) {
+          setDoctorData(parsedData);
+          fetchInitialData(parsedData.id);
+        } else {
+          navigate('/login');
+        }
+      } catch (error) {
+        console.error('Error parsing doctor data:', error);
+        navigate('/login');
+      }
     } else {
       navigate('/login');
     }
   }, [navigate]);
 
-  // Fetch appointments for this specific doctor
+  const fetchInitialData = async (doctorId) => {
+    try {
+      setIsLoading(prev => ({ ...prev, initial: true }));
+      await Promise.all([
+        fetchDoctorAppointments(doctorId),
+        fetchPatientsWithAppointments(doctorId),
+        fetchNotifications(doctorId)
+      ]);
+    } catch (error) {
+      console.error('Error fetching initial data:', error);
+    } finally {
+      setIsLoading(prev => ({ ...prev, initial: false }));
+    }
+  };
+
+  // Fetch appointments for this specific doctor with proper error handling
   const fetchDoctorAppointments = async (doctorId) => {
     try {
       setIsLoading(prev => ({ ...prev, appointments: true }));
       const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments?doctorId=${doctorId}`);
-      if (!response.ok) throw new Error('Failed to fetch appointments');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
-      setUpcomingAppointments(data);
+      
+      // Normalize appointment data
+      const normalizedAppointments = Array.isArray(data) ? data.map(appt => ({
+        id: appt.id || appt._id || '',
+        patientName: appt.patientName || 
+                   (appt.patient ? `${appt.patient.firstName || ''} ${appt.patient.lastName || ''}`.trim() : 'Unknown Patient'),
+        date: appt.date || new Date().toISOString().split('T')[0],
+        time: appt.time || '00:00',
+        reason: appt.reason || 'No reason provided',
+        status: appt.status || 'Pending',
+        notes: appt.notes || '',
+        patientId: appt.patientId || (appt.patient ? appt.patient.id : null)
+      })) : [];
+      
+      setUpcomingAppointments(normalizedAppointments);
     } catch (error) {
       console.error('Error fetching appointments:', error);
+      setUpcomingAppointments([]);
     } finally {
       setIsLoading(prev => ({ ...prev, appointments: false }));
     }
   };
 
-  // Fetch patients who have appointments with this doctor
+  // Fetch patients with proper error handling
   const fetchPatientsWithAppointments = async (doctorId) => {
     try {
       setIsLoading(prev => ({ ...prev, patients: true }));
       const response = await fetch(`https://mediflow-s7af.onrender.com/api/user-patients?doctorId=${doctorId}`);
-      if (!response.ok) throw new Error('Failed to fetch patients');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
-      setPatientRecords(data);
+      
+      // Normalize patient data
+      const normalizedPatients = Array.isArray(data) ? data.map(patient => ({
+        id: patient.id || patient._id || '',
+        name: patient.name || 
+             `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 
+             'Unknown Patient',
+        age: patient.age || 'Unknown',
+        gender: patient.gender || 'Unknown',
+        lastVisit: patient.lastVisit || '',
+        nextAppointment: patient.nextAppointment || '',
+        primaryDiagnosis: patient.primaryDiagnosis || 'No diagnosis',
+        medications: Array.isArray(patient.medications) ? patient.medications : []
+      })) : [];
+      
+      setPatientRecords(normalizedPatients);
     } catch (error) {
       console.error('Error fetching patients:', error);
+      setPatientRecords([]);
     } finally {
       setIsLoading(prev => ({ ...prev, patients: false }));
     }
   };
 
+  // Fetch notifications with proper error handling
+  const fetchNotifications = async (doctorId) => {
+    try {
+      setIsLoading(prev => ({ ...prev, notifications: true }));
+      const response = await fetch(`/api/notifications?userId=${doctorId}&role=doctor`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setNotifications(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      setNotifications([]);
+    } finally {
+      setIsLoading(prev => ({ ...prev, notifications: false }));
+    }
+  };
 
-  // Handle appointment status change (accept/decline)
+  // Safe filtering functions
+  const filteredAppointments = upcomingAppointments.filter(appt => {
+    try {
+      return (
+        appt &&
+        appt.patientName &&
+        appt.patientName.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        (appointmentFilter === 'all' || appt.status === appointmentFilter)
+      );
+    } catch (error) {
+      console.error('Error filtering appointments:', error);
+      return false;
+    }
+  });
+
+  const filteredPatients = patientRecords.filter(patient => {
+    try {
+      return (
+        patient &&
+        patient.name &&
+        patient.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    } catch (error) {
+      console.error('Error filtering patients:', error);
+      return false;
+    }
+  });
+
+  // Handle appointment status change with proper error handling
   const handleAppointmentAction = async (appointmentId, action) => {
     try {
+      const appointmentToUpdate = upcomingAppointments.find(a => a.id === appointmentId);
+      if (!appointmentToUpdate) {
+        throw new Error('Appointment not found');
+      }
+
       // Optimistic UI update
       setUpcomingAppointments(prev =>
         prev.map(appt =>
@@ -106,13 +220,14 @@ const DoctorsDashboard = () => {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to update appointment');
+      if (!response.ok) {
+        throw new Error('Failed to update appointment status');
+      }
 
       // Add notification
-      const updatedAppointment = upcomingAppointments.find(a => a.id === appointmentId);
       const newNotification = {
         id: Date.now(),
-        message: `You ${action === 'accept' ? 'accepted' : 'declined'} appointment with ${updatedAppointment.patientName}`,
+        message: `You ${action === 'accept' ? 'accepted' : 'declined'} appointment with ${appointmentToUpdate.patientName || 'a patient'}`,
         time: 'Just now',
         read: false,
         type: 'appointment_update'
@@ -127,14 +242,14 @@ const DoctorsDashboard = () => {
       setUpcomingAppointments(prev =>
         prev.map(appt =>
           appt.id === appointmentId
-            ? { ...appt, status: 'Pending' }
+            ? { ...appt, status: appointmentToUpdate?.status || 'Pending' }
             : appt
         )
       );
     }
   };
 
-  // Update appointment notes
+  // Update appointment notes with proper error handling
   const updateAppointmentNotes = async (appointmentId, notes) => {
     try {
       const response = await fetch(`/api/appointments/${appointmentId}/notes`, {
@@ -148,7 +263,9 @@ const DoctorsDashboard = () => {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to update notes');
+      if (!response.ok) {
+        throw new Error('Failed to update notes');
+      }
 
       // Update local state
       setUpcomingAppointments(prev =>
@@ -169,21 +286,46 @@ const DoctorsDashboard = () => {
     navigate('/login');
   };
 
-  // Filter appointments based on search and status filter
-  const filteredAppointments = upcomingAppointments
-    .filter(appt =>
-      appt.patientName.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      (appointmentFilter === 'all' || appt.status === appointmentFilter)
+  if (isLoading.initial || !doctorData) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
     );
-
-  // Filter patients based on search
-  const filteredPatients = patientRecords.filter(patient =>
-    patient.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  if (!doctorData) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
+
+  // StatCard Component
+  const StatCard = ({ title, value, icon: Icon, color }) => {
+    const colorClasses = {
+      blue: 'bg-blue-100 text-blue-600',
+      green: 'bg-green-100 text-green-600',
+      orange: 'bg-orange-100 text-orange-600',
+      purple: 'bg-purple-100 text-purple-600'
+    };
+
+    return (
+      <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="p-5">
+          <div className="flex items-center">
+            <div className={`flex-shrink-0 rounded-full p-3 ${colorClasses[color]}`}>
+              <Icon className="h-6 w-6" />
+            </div>
+            <div className="ml-5 w-0 flex-1">
+              <dl>
+                <dt className="text-sm font-medium text-gray-500 truncate">{title}</dt>
+                <dd className="flex items-baseline">
+                  <div className="text-2xl font-semibold text-gray-900">{value}</div>
+                </dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -390,7 +532,7 @@ const DoctorsDashboard = () => {
                     <h3 className="text-lg font-medium text-gray-900">Pending Appointments</h3>
                   </div>
                   {isLoading.appointments ? (
-                    <div className="p-8 text-center text-gray-500">Loading...</div>
+                    <div className="p-8 text-center text-gray-500">Loading appointments...</div>
                   ) : upcomingAppointments.filter(a => a.status === 'Pending').length > 0 ? (
                     <>
                       <div className="divide-y divide-gray-200">
@@ -446,7 +588,7 @@ const DoctorsDashboard = () => {
                     <h3 className="text-lg font-medium text-gray-900">Recent Patients</h3>
                   </div>
                   {isLoading.patients ? (
-                    <div className="p-8 text-center text-gray-500">Loading...</div>
+                    <div className="p-8 text-center text-gray-500">Loading patients...</div>
                   ) : patientRecords.length > 0 ? (
                     <>
                       <div className="divide-y divide-gray-200">
@@ -466,7 +608,7 @@ const DoctorsDashboard = () => {
                               </div>
                               <div className="text-right">
                                 <p className="text-sm">
-                                  Last visit: {new Date(patient.lastVisit).toLocaleDateString()}
+                                  Last visit: {patient.lastVisit ? new Date(patient.lastVisit).toLocaleDateString() : 'Never'}
                                 </p>
                                 {patient.nextAppointment && (
                                   <p className="text-xs text-blue-600">
@@ -494,7 +636,6 @@ const DoctorsDashboard = () => {
               </div>
             </div>
           )}
-
           {/* Appointments Tab */}
           {activeTab === 'appointments' && (
             <div className="space-y-4">
