@@ -56,7 +56,7 @@ const DoctorsDashboard = () => {
   const fetchDoctorAppointments = async (doctorId) => {
     try {
       setIsLoading(prev => ({ ...prev, appointments: true }));
-      const response = await fetch(`/api/appointments?doctorId=${doctorId}`);
+      const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments?doctorId=${doctorId}`);
       if (!response.ok) throw new Error('Failed to fetch appointments');
       const data = await response.json();
       setUpcomingAppointments(data);
@@ -71,7 +71,7 @@ const DoctorsDashboard = () => {
   const fetchPatientsWithAppointments = async (doctorId) => {
     try {
       setIsLoading(prev => ({ ...prev, patients: true }));
-      const response = await fetch(`/api/patients?doctorId=${doctorId}`);
+      const response = await fetch(`https://mediflow-s7af.onrender.com/api/user-patients?doctorId=${doctorId}`);
       if (!response.ok) throw new Error('Failed to fetch patients');
       const data = await response.json();
       setPatientRecords(data);
@@ -86,7 +86,7 @@ const DoctorsDashboard = () => {
   const fetchNotifications = async (doctorId) => {
     try {
       setIsLoading(prev => ({ ...prev, notifications: true }));
-      const response = await fetch(`/api/notifications?userId=${doctorId}&role=doctor`);
+      const response = await fetch(`https://mediflow-s7af.onrender.com/api/notifications?userId=${doctorId}&role=doctor`);
       if (!response.ok) throw new Error('Failed to fetch notifications');
       const data = await response.json();
       setNotifications(data);
@@ -109,7 +109,7 @@ const DoctorsDashboard = () => {
         )
       );
 
-      const response = await fetch(`/api/appointments/${appointmentId}/status`, {
+      const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/${appointmentId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
