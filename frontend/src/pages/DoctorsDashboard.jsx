@@ -86,7 +86,7 @@ const DoctorsDashboard = () => {
   const fetchNotifications = async (doctorId) => {
     try {
       setIsLoading(prev => ({ ...prev, notifications: true }));
-      const response = await fetch(`https://mediflow-s7af.onrender.com/api/notifications?userId=${doctorId}&role=doctor`);
+      const response = await fetch(`/api/notifications?userId=${doctorId}&role=doctor`);
       if (!response.ok) throw new Error('Failed to fetch notifications');
       const data = await response.json();
       setNotifications(data);
