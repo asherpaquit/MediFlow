@@ -86,10 +86,7 @@ const PatientDashboard = () => {
             }
         }, []);
 
-    const [medicalRecords] = useState([
-        { id: 1, date: '2025-04-10', doctor: 'Dr. Sarah Johnson', diagnosis: 'Hypertension', prescription: 'Lisinopril 10mg daily' },
-        { id: 2, date: '2025-02-22', doctor: 'Dr. Emily Wong', diagnosis: 'Annual Checkup', prescription: 'None' }
-    ]);
+    const [medicalRecords] = useState([]);
 
     // --- NEW State for Appointment Booking ---
     const [doctors, setDoctors] = useState([]);
