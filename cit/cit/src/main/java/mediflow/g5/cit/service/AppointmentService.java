@@ -19,10 +19,6 @@ public class AppointmentService {
     @Autowired
     private UserPatientRepository userPatientRepository; // Add this
 
-    public List<Appointment> getAppointmentsByDoctorId(Long doctorId) {
-        return appointmentRepository.findByDoctorDoctorId(doctorId);
-    }
-
     public List<Appointment> getAppointmentsByPatientId(Long patientId) {
         return appointmentRepository.findByPatientPatientId(patientId);
     }
