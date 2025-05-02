@@ -20,45 +20,28 @@ const DoctorLogin = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setIsLoading(true);
-  
     try {
       const response = await fetch('https://mediflow-s7af.onrender.com/api/user-doctors/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
         },
-        body: JSON.stringify(credentials)
+        body: JSON.stringify({ username, password }),
       });
   
-      const responseText = await response.text();
-      let errorData;
-      
-      try {
-        errorData = JSON.parse(responseText); // Try to parse as JSON
-      } catch {
-        errorData = { message: responseText }; // If not JSON, use the text as message
-      }
-  
       if (!response.ok) {
-        throw new Error(errorData.message || 'Login failed');
+        throw new Error('Login failed');
       }
   
-      const doctorData = JSON.parse(responseText);
+      const result = await response.json();
       
-      // Store authentication data
-      sessionStorage.setItem('doctorData', JSON.stringify(doctorData));
-      sessionStorage.setItem('isDoctorAuthenticated', 'true');
+      // Store the received token and doctor data
+      localStorage.setItem('token', result.token);
+      sessionStorage.setItem('doctorData', JSON.stringify(result.doctor));
       
-      // Redirect to dashboard
       navigate('/doctor-dashboard');
-      
-    } catch (err) {
-      setError(err.message || 'Login failed. Please try again.');
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      setError(error.message);
     }
   };
 

@@ -20,28 +20,35 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    const API_URL = process.env.REACT_APP_API_URL || 'https://mediflow-s7af.onrender.com';
+
     try {
-      const response = await fetch('https://mediflow-s7af.onrender.com/api/user-doctors/login', {
+      const response = await fetch(`https://mediflow-s7af.onrender.com/api/user-patients/login`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify(credentials)
       });
-  
+
       if (!response.ok) {
-        throw new Error('Login failed');
+        throw new Error('Invalid username or password');
       }
-  
-      const result = await response.json();
-      
-      // Store the received token and doctor data
-      localStorage.setItem('token', result.token);
-      sessionStorage.setItem('doctorData', JSON.stringify(result.doctor));
-      
-      navigate('/doctor-dashboard');
-    } catch (error) {
-      setError(error.message);
+
+      const userData = await response.json();
+
+      // Store user data in session
+      sessionStorage.setItem('patientData', JSON.stringify(userData));
+      sessionStorage.setItem('isAuthenticated', 'true');
+
+      navigate('/patient-dashboard');
+    } catch (err) {
+      setError(err.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
