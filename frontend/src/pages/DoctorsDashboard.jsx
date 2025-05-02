@@ -25,27 +25,21 @@ const DoctorsDashboard = () => {
   const [patientRecords, setPatientRecords] = useState([]);
   const [notifications, setNotifications] = useState([]);
 
-
   useEffect(() => {
-    // Get doctor data from session storage
     const storedData = sessionStorage.getItem('doctorData');
     if (storedData) {
       setDoctorData(JSON.parse(storedData));
-      // Assuming you would fetch appointments and patient records here
-      fetchDoctorAppointments(JSON.parse(storedData).id); // Fetch appointments for the logged-in doctor
+      fetchDoctorAppointments(JSON.parse(storedData).id);
     } else {
-      // If no doctor data found, redirect to login
       navigate('/login');
     }
   }, [navigate]);
 
-   // Effect to fetch doctor's appointments
-   const fetchDoctorAppointments = async (doctorId) => {
+  const fetchDoctorAppointments = async (doctorId) => {
     setIsLoading(true);
     try {
-      // Replace with your actual API endpoint to fetch appointments by doctor ID
       const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}`, {
-         headers: {
+        headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
@@ -53,16 +47,13 @@ const DoctorsDashboard = () => {
         throw new Error('Failed to fetch appointments');
       }
       const data = await response.json();
-       // Assuming the API returns appointments with patient details included
       setUpcomingAppointments(data);
       setIsLoading(false);
     } catch (error) {
       console.error('Error fetching appointments:', error);
       setIsLoading(false);
-      // Optionally set an error state to display to the user
     }
   };
-
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -98,8 +89,7 @@ const DoctorsDashboard = () => {
     }
   };
 
-   // --- NEW Handler Functions for Accept and Decline ---
-   const handleAcceptAppointment = async (appointmentId) => {
+  const handleAcceptAppointment = async (appointmentId) => {
     try {
       if (!doctorData || !doctorData.id) {
         console.error("Doctor data not found.");
@@ -114,7 +104,7 @@ const DoctorsDashboard = () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
-          body: JSON.stringify({ status: 'Confirmed' }), // Send the updated status
+          body: JSON.stringify({ status: 'Confirmed' }),
         }
       );
 
@@ -122,23 +112,19 @@ const DoctorsDashboard = () => {
         throw new Error('Failed to accept appointment');
       }
 
-      // Update the local state to reflect the change
       setUpcomingAppointments(prevAppointments =>
         prevAppointments.map(appt =>
-          appt.appointmentId === appointmentId ? { ...appt, status: 'Confirmed' } : appt
+          appt.id === appointmentId ? { ...appt, status: 'Confirmed' } : appt
         )
       );
-
-      console.log(`Appointment ${appointmentId} accepted.`);
     } catch (error) {
       console.error('Error accepting appointment:', error);
-      // Optionally show an error message to the user
     }
   };
 
   const handleDeclineAppointment = async (appointmentId) => {
     try {
-       if (!doctorData || !doctorData.id) {
+      if (!doctorData || !doctorData.id) {
         console.error("Doctor data not found.");
         return;
       }
@@ -150,7 +136,7 @@ const DoctorsDashboard = () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
-          body: JSON.stringify({ status: 'Declined' }), // Send the updated status
+          body: JSON.stringify({ status: 'Declined' }),
         }
       );
 
@@ -158,24 +144,19 @@ const DoctorsDashboard = () => {
         throw new Error('Failed to decline appointment');
       }
 
-      // Update the local state to reflect the change
       setUpcomingAppointments(prevAppointments =>
         prevAppointments.map(appt =>
-          appt.appointmentId === appointmentId ? { ...appt, status: 'Declined' } : appt
+          appt.id === appointmentId ? { ...appt, status: 'Declined' } : appt
         )
       );
-
-      console.log(`Appointment ${appointmentId} declined.`);
     } catch (error) {
       console.error('Error declining appointment:', error);
-      // Optionally show an error message to the user
     }
   };
 
-
   const filteredAppointments = upcomingAppointments.filter(appt =>
-    appt.patient?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    appt.type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    appt.patient?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    appt.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     appt.status?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -190,7 +171,6 @@ const DoctorsDashboard = () => {
       </div>
     );
   }
-
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -370,12 +350,10 @@ const DoctorsDashboard = () => {
                       {upcomingAppointments.length > 0 ? (
                         <div className="divide-y divide-gray-200">
                           {upcomingAppointments.slice(0, 3).map((appt) => (
-                            <div key={appt.appointmentId} className="p-4 hover:bg-gray-50 transition-colors">
+                            <div key={appt.id} className="p-4 hover:bg-gray-50 transition-colors">
                               <div className="flex justify-between">
                                 <div>
-                                   {/* Display patient name from nested patient object */}
-                                  <p className="font-medium">{appt.patient?.firstname} {appt.patient?.lastname}</p>
-                                   {/* Display appointment reason if available */}
+                                  <p className="font-medium">{appt.patient}</p>
                                   <p className="text-sm text-gray-500">{appt.notes || 'General Check-up'}</p>
                                 </div>
                                 <div className="text-right">
@@ -383,9 +361,9 @@ const DoctorsDashboard = () => {
                                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                                     appt.status === 'Confirmed'
                                       ? 'bg-green-100 text-green-800'
-                                       : appt.status === 'Declined'
+                                      : appt.status === 'Declined'
                                         ? 'bg-red-100 text-red-800'
-                                        : 'bg-yellow-100 text-yellow-800' // Pending status
+                                        : 'bg-yellow-100 text-yellow-800'
                                   }`}>
                                     {appt.status}
                                   </span>
@@ -413,7 +391,6 @@ const DoctorsDashboard = () => {
                       <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                         <h3 className="text-lg font-medium text-gray-900">Recent Patients</h3>
                       </div>
-                       {/* Patient records display section - currently uses placeholder data/structure */}
                       {patientRecords.length > 0 ? (
                         <div className="divide-y divide-gray-200">
                           {patientRecords.slice(0, 3).map((patient) => (
@@ -454,7 +431,6 @@ const DoctorsDashboard = () => {
                 <div className="bg-white shadow rounded-lg overflow-hidden">
                   <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
                     <h3 className="text-lg font-medium text-gray-900">Appointments</h3>
-                     {/* New Appointment button - functionality not fully implemented */}
                     <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
                       + New Appointment
                     </button>
@@ -462,12 +438,10 @@ const DoctorsDashboard = () => {
                   <div className="divide-y divide-gray-200">
                     {filteredAppointments.length > 0 ? (
                       filteredAppointments.map((appt) => (
-                        <div key={appt.appointmentId} className="p-4 hover:bg-gray-50 transition-colors">
+                        <div key={appt.id} className="p-4 hover:bg-gray-50 transition-colors">
                           <div className="flex flex-col sm:flex-row justify-between">
                             <div className="mb-2 sm:mb-0">
-                              {/* Display patient name from nested patient object */}
-                              <p className="font-medium">{appt.patient?.firstname} {appt.patient?.lastname}</p>
-                              {/* Display appointment reason if available */}
+                              <p className="font-medium">{appt.patient}</p>
                               <p className="text-sm text-gray-500">{appt.notes || 'General Check-up'}</p>
                             </div>
                             <div className="flex flex-col sm:items-end">
@@ -487,31 +461,28 @@ const DoctorsDashboard = () => {
                                 ? 'bg-green-100 text-green-800'
                                 : appt.status === 'Declined'
                                     ? 'bg-red-100 text-red-800'
-                                : 'bg-yellow-100 text-yellow-800' // Pending status
+                                : 'bg-yellow-100 text-yellow-800'
                             }`}>
                               {appt.status}
                             </span>
                             <div className="space-x-2">
-                               {/* Accept and Decline buttons - only show for pending */}
-                                {appt.status === 'Pending' && (
-                                  <>
-                                    <button
-                                      onClick={() => handleAcceptAppointment(appt.appointmentId)}
-                                      className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
-                                    >
-                                      Accept
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeclineAppointment(appt.appointmentId)}
-                                      className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-                                    >
-                                      Decline
-                                    </button>
-                                  </>
-                                )}
-                               {/* View Details button - available for all statuses */}
+                              {appt.status === 'Pending' && (
+                                <>
+                                  <button
+                                    onClick={() => handleAcceptAppointment(appt.id)}
+                                    className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                                  >
+                                    Accept
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeclineAppointment(appt.id)}
+                                    className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                                  >
+                                    Decline
+                                  </button>
+                                </>
+                              )}
                               <button className="text-xs text-blue-600 hover:text-blue-800">View Details</button>
-                              {/* Reschedule button - optionally add logic based on status */}
                               <button className="text-xs text-gray-600 hover:text-gray-800">Reschedule</button>
                             </div>
                           </div>
@@ -531,12 +502,10 @@ const DoctorsDashboard = () => {
                 <div className="bg-white shadow rounded-lg overflow-hidden">
                   <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
                     <h3 className="text-lg font-medium text-gray-900">Patients</h3>
-                     {/* Add New Patient button - functionality not fully implemented */}
                     <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
                       + Add New Patient
                     </button>
                   </div>
-                   {/* Patient records display section - currently uses placeholder data/structure */}
                   <div className="divide-y divide-gray-200">
                     {filteredPatients.length > 0 ? (
                       filteredPatients.map((patient) => (
@@ -608,16 +577,14 @@ const DoctorsDashboard = () => {
                     <div className="max-w-lg mx-auto space-y-6">
                       <div className="flex flex-col items-center">
                         <div className="relative group">
-                          {/* Profile image display - currently uses placeholder or UserCircleIcon */}
                           <UserCircleIcon className="h-24 w-24 text-gray-400" />
-                           {/* Image upload functionality - currently basic */}
                           <label className="absolute bottom-0 right-0 bg-blue-500 text-white p-2 rounded-full cursor-pointer hover:bg-blue-600">
                             <CameraIcon className="h-4 w-4" />
                             <input type="file" className="hidden" />
                           </label>
                         </div>
 
-                        <h2 className="mt-4 text-lg font-medium">Dr. {doctorData.username}</h2>
+                        <h2 className="mt-4 text-lg font-medium">Dr. {doctorData.firstName} {doctorData.lastName}</h2>
                         <p className="text-sm text-gray-500">{doctorData.specialization}</p>
                       </div>
 
@@ -637,8 +604,8 @@ const DoctorsDashboard = () => {
                           <input
                             type="tel"
                             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                             value={doctorData.phone || ''} // Handle potential null/undefined
-                             onChange={(e) => setDoctorData({...doctorData, phone: e.target.value})}
+                            value={doctorData.phone || ''}
+                            onChange={(e) => setDoctorData({...doctorData, phone: e.target.value})}
                           />
                         </div>
 
@@ -649,23 +616,19 @@ const DoctorsDashboard = () => {
                             value={doctorData.specialization}
                             onChange={(e) => setDoctorData({...doctorData, specialization: e.target.value})}
                           >
-                             <option value="">Select Specialization</option> {/* Added a default option */}
+                            <option value="">Select Specialization</option>
                             <option>Cardiology</option>
                             <option>Neurology</option>
                             <option>Pediatrics</option>
                             <option>General Practice</option>
-                             {/* Add more specializations as needed */}
                           </select>
                         </div>
 
                         <div className="pt-4">
-                           {/* Save Changes button - currently logs to console */}
                           <button
                             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
                             onClick={() => {
-                              // In a real app, you would save this to your backend
                               console.log('Updated doctor data:', doctorData);
-                               // Call handleUpdateProfile here in a real implementation
                             }}
                           >
                             Save Changes
@@ -684,7 +647,6 @@ const DoctorsDashboard = () => {
   );
 };
 
-// StatCard Component - Reused for Dashboard statistics
 const StatCard = ({ title, value, icon: Icon, color }) => {
   const colorClasses = {
     blue: 'bg-blue-100 text-blue-600',
