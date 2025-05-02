@@ -35,10 +35,11 @@ const DoctorsDashboard = () => {
     }
   }, [navigate]);
 
+  const API_BASE = 'https://mediflow-s7af.onrender.com';
   const fetchDoctorAppointments = async (doctorId) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments?doctorId=${doctorId}`);
+      const response = await fetch(`${API_BASE}/api/appointments?doctorId=${doctorId}`);
       const data = await response.json();
       
       if (response.ok) {
@@ -68,7 +69,7 @@ const DoctorsDashboard = () => {
 
   const handleAppointmentAction = async (appointmentId, action) => {
     try {
-      const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/${appointmentId}`, {
+      const response = await fetch(`${API_BASE}/api/appointments/${appointmentId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

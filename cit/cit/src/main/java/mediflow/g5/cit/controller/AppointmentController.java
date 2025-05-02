@@ -22,11 +22,17 @@ public class AppointmentController {
     private AppointmentService appointmentService;
 
     @Autowired
-    private UserDoctorService userDoctorService; // Inject UserDoctorService
+    private UserDoctorService userDoctorService; 
 
     @GetMapping
     public List<Appointment> getAllAppointments() {
         return appointmentService.getAllAppointments();
+    }
+
+    @GetMapping("/doctor/{doctorId}")
+    public ResponseEntity<List<Appointment>> getAppointmentsByDoctorId(@PathVariable Long doctorId) {
+        List<Appointment> appointments = appointmentService.getAppointmentsByDoctorId(doctorId);
+        return ResponseEntity.ok(appointments);
     }
 
     @GetMapping("/{id}")
