@@ -20,35 +20,45 @@ const DoctorsDashboard = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [doctorData, setDoctorData] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [patients, setPatients] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get doctor data from session storage
     const storedData = sessionStorage.getItem('doctorData');
     if (storedData) {
-      setDoctorData(JSON.parse(storedData));
+      const doctor = JSON.parse(storedData);
+      setDoctorData(doctor);
+      fetchDoctorAppointments(doctor.id);
     } else {
-      // If no doctor data found, redirect to login
       navigate('/login');
     }
   }, [navigate]);
 
-  const [upcomingAppointments] = useState([
-    { id: 1, patient: 'John Smith', time: '09:30 AM', date: '2023-06-15', type: 'Follow-up', status: 'Confirmed' },
-    { id: 2, patient: 'Sarah Johnson', time: '10:45 AM', date: '2023-06-15', type: 'New Patient', status: 'Confirmed' },
-    { id: 3, patient: 'Michael Brown', time: '02:15 PM', date: '2023-06-15', type: 'Consultation', status: 'Pending' }
-  ]);
-  
-
-  const [patientRecords] = useState([
-    { id: 1, name: 'John Smith', lastVisit: '2023-05-10', diagnosis: 'Hypertension', nextAppointment: '2023-06-15' },
-    { id: 2, name: 'Emily Davis', lastVisit: '2023-05-12', diagnosis: 'Diabetes Management', nextAppointment: '2023-06-20' },
-    { id: 3, name: 'Robert Wilson', lastVisit: '2023-05-15', diagnosis: 'Annual Physical', nextAppointment: '2023-07-01' }
-  ]);
-
-  const [notifications] = useState([
-    { id: 1, message: 'New lab results available for John Smith', time: '2 hours ago', read: false },
-    { id: 2, message: 'Appointment cancellation: Lisa Ray', time: '1 day ago', read: true }
-  ]);
+  const fetchDoctorAppointments = async (doctorId) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments?doctorId=${doctorId}`);
+      const data = await response.json();
+      
+      if (response.ok) {
+        setAppointments(data.appointments);
+        const uniquePatients = data.appointments.reduce((acc, appointment) => {
+          if (!acc.some(p => p.id === appointment.patient.id)) {
+            acc.push(appointment.patient);
+          }
+          return acc;
+        }, []);
+        setPatients(uniquePatients);
+      } else {
+        console.error('Failed to fetch appointments:', data.message);
+      }
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     sessionStorage.removeItem('doctorData');
@@ -56,16 +66,44 @@ const DoctorsDashboard = () => {
     navigate('/login');
   };
 
-  const filteredAppointments = upcomingAppointments.filter(appt => 
-    appt.patient.toLowerCase().includes(searchQuery.toLowerCase())
+  const handleAppointmentAction = async (appointmentId, action) => {
+    try {
+      const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/${appointmentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: action }),
+      });
+
+      if (response.ok) {
+        setAppointments(prevAppointments =>
+          prevAppointments.map(appt =>
+            appt.id === appointmentId ? { ...appt, status: action } : appt
+          )
+        );
+      } else {
+        console.error('Failed to update appointment status');
+      }
+    } catch (error) {
+      console.error('Error updating appointment:', error);
+    }
+  };
+
+  const filteredAppointments = appointments.filter(appt => 
+    appt.patient.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredPatients = patientRecords.filter(patient => 
+  const filteredPatients = patients.filter(patient => 
     patient.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (!doctorData) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
+
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-screen">Loading appointments...</div>;
   }
 
   return (
@@ -142,16 +180,10 @@ const DoctorsDashboard = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <button className="p-1 text-gray-400 hover:text-gray-500 relative">
-                <BellIcon className="w-6 h-6" />
-                {notifications.some(n => !n.read) && (
-                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-                )}
-              </button>
               <div className="flex items-center">
                 <div className="ml-3">
-                <div className="text-sm font-medium text-gray-700">Dr. {doctorData.username}</div>
-                <div className="text-xs text-gray-500">{doctorData.specialization}</div>
+                  <div className="text-sm font-medium text-gray-700">Dr. {doctorData.username}</div>
+                  <div className="text-xs text-gray-500">{doctorData.specialization}</div>
                 </div>
                 <UserCircleIcon className="w-8 h-8 ml-2 text-gray-400" />
               </div>
@@ -217,19 +249,19 @@ const DoctorsDashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard 
                   title="Today's Appointments" 
-                  value={upcomingAppointments.length} 
+                  value={appointments.filter(a => new Date(a.date).toDateString() === new Date().toDateString()).length} 
                   icon={CalendarIcon} 
                   color="blue" 
                 />
                 <StatCard 
                   title="Active Patients" 
-                  value={patientRecords.length} 
+                  value={patients.length} 
                   icon={UsersIcon} 
                   color="green" 
                 />
                 <StatCard 
-                  title="Pending Actions" 
-                  value={notifications.filter(n => !n.read).length} 
+                  title="Pending Appointments" 
+                  value={appointments.filter(a => a.status === 'pending').length} 
                   icon={BellIcon} 
                   color="orange" 
                 />
@@ -241,26 +273,32 @@ const DoctorsDashboard = () => {
                     <h3 className="text-lg font-medium text-gray-900">Upcoming Appointments</h3>
                   </div>
                   <div className="divide-y divide-gray-200">
-                    {upcomingAppointments.slice(0, 3).map((appt) => (
-                      <div key={appt.id} className="p-4 hover:bg-gray-50 transition-colors">
-                        <div className="flex justify-between">
-                          <div>
-                            <p className="font-medium">{appt.patient}</p>
-                            <p className="text-sm text-gray-500">{appt.type}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm">{appt.time}</p>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                              appt.status === 'Confirmed' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {appt.status}
-                            </span>
+                    {appointments
+                      .filter(a => new Date(a.date) >= new Date())
+                      .sort((a, b) => new Date(a.date) - new Date(b.date))
+                      .slice(0, 3)
+                      .map((appt) => (
+                        <div key={appt.id} className="p-4 hover:bg-gray-50 transition-colors">
+                          <div className="flex justify-between">
+                            <div>
+                              <p className="font-medium">{appt.patient.name}</p>
+                              <p className="text-sm text-gray-500">{appt.type}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm">{appt.time}</p>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                appt.status === 'confirmed' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : appt.status === 'pending'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-red-100 text-red-800'
+                              }`}>
+                                {appt.status}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                   <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 text-right">
                     <button 
@@ -277,16 +315,15 @@ const DoctorsDashboard = () => {
                     <h3 className="text-lg font-medium text-gray-900">Recent Patients</h3>
                   </div>
                   <div className="divide-y divide-gray-200">
-                    {patientRecords.slice(0, 3).map((patient) => (
+                    {patients.slice(0, 3).map((patient) => (
                       <div key={patient.id} className="p-4 hover:bg-gray-50 transition-colors">
                         <div className="flex justify-between">
                           <div>
                             <p className="font-medium">{patient.name}</p>
-                            <p className="text-sm text-gray-500">{patient.diagnosis}</p>
+                            <p className="text-sm text-gray-500">{patient.condition || 'No condition specified'}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm">Last visit: {patient.lastVisit}</p>
-                            <p className="text-xs text-blue-600">Next: {patient.nextAppointment}</p>
+                            <p className="text-sm">Last visit: {patient.lastVisit || 'N/A'}</p>
                           </div>
                         </div>
                       </div>
@@ -310,48 +347,61 @@ const DoctorsDashboard = () => {
             <div className="bg-white shadow rounded-lg overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
                 <h3 className="text-lg font-medium text-gray-900">Appointments</h3>
-                <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-                  + New Appointment
-                </button>
               </div>
               <div className="divide-y divide-gray-200">
                 {filteredAppointments.length > 0 ? (
-                  filteredAppointments.map((appt) => (
-                    <div key={appt.id} className="p-4 hover:bg-gray-50 transition-colors">
-                      <div className="flex flex-col sm:flex-row justify-between">
-                        <div className="mb-2 sm:mb-0">
-                          <p className="font-medium">{appt.patient}</p>
-                          <p className="text-sm text-gray-500">{appt.type}</p>
+                  filteredAppointments
+                    .sort((a, b) => new Date(a.date) - new Date(b.date))
+                    .map((appt) => (
+                      <div key={appt.id} className="p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex flex-col sm:flex-row justify-between">
+                          <div className="mb-2 sm:mb-0">
+                            <p className="font-medium">{appt.patient.name}</p>
+                            <p className="text-sm text-gray-500">{appt.type}</p>
+                          </div>
+                          <div className="flex flex-col sm:items-end">
+                            <div className="flex items-center text-sm text-gray-500 mb-1">
+                              <CalendarIcon className="w-4 h-4 mr-1" />
+                              {appt.date}
+                            </div>
+                            <div className="flex items-center text-sm text-gray-500">
+                              <ClockIcon className="w-4 h-4 mr-1" />
+                              {appt.time}
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex flex-col sm:items-end">
-                          <div className="flex items-center text-sm text-gray-500 mb-1">
-                            <CalendarIcon className="w-4 h-4 mr-1" />
-                            {appt.date}
-                          </div>
-                          <div className="flex items-center text-sm text-gray-500">
-                            <ClockIcon className="w-4 h-4 mr-1" />
-                            {appt.time}
-                          </div>
+                        <div className="mt-2 flex justify-between items-center">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                            appt.status === 'confirmed' 
+                              ? 'bg-green-100 text-green-800' 
+                              : appt.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
+                          }`}>
+                            {appt.status}
+                          </span>
+                          {appt.status === 'pending' && (
+                            <div className="space-x-2">
+                              <button 
+                                onClick={() => handleAppointmentAction(appt.id, 'confirmed')}
+                                className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded hover:bg-green-200"
+                              >
+                                Accept
+                              </button>
+                              <button 
+                                onClick={() => handleAppointmentAction(appt.id, 'declined')}
+                                className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded hover:bg-red-200"
+                              >
+                                Decline
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <div className="mt-2 flex justify-between items-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          appt.status === 'Confirmed' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {appt.status}
-                        </span>
-                        <div className="space-x-2">
-                          <button className="text-xs text-blue-600 hover:text-blue-800">View Details</button>
-                          <button className="text-xs text-gray-600 hover:text-gray-800">Reschedule</button>
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                    ))
                 ) : (
                   <div className="p-8 text-center text-gray-500">
-                    No appointments found matching your search
+                    No appointments found
                   </div>
                 )}
               </div>
@@ -363,9 +413,6 @@ const DoctorsDashboard = () => {
             <div className="bg-white shadow rounded-lg overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
                 <h3 className="text-lg font-medium text-gray-900">Patients</h3>
-                <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-                  + Add New Patient
-                </button>
               </div>
               <div className="divide-y divide-gray-200">
                 {filteredPatients.length > 0 ? (
@@ -379,12 +426,12 @@ const DoctorsDashboard = () => {
                           <div className="flex items-center justify-between">
                             <p className="font-medium">{patient.name}</p>
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                              {patient.diagnosis}
+                              {patient.condition || 'No condition'}
                             </span>
                           </div>
                           <div className="mt-1 flex items-center text-sm text-gray-500">
                             <CalendarIcon className="flex-shrink-0 mr-1 h-4 w-4" />
-                            <span>Last visit: {patient.lastVisit}</span>
+                            <span>Last visit: {patient.lastVisit || 'N/A'}</span>
                           </div>
                         </div>
                       </div>
@@ -392,15 +439,12 @@ const DoctorsDashboard = () => {
                         <button className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
                           View History
                         </button>
-                        <button className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
-                          Schedule Visit
-                        </button>
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="p-8 text-center text-gray-500">
-                    No patients found matching your search
+                    No patients found
                   </div>
                 )}
               </div>
@@ -487,7 +531,6 @@ const DoctorsDashboard = () => {
                       <button 
                         className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
                         onClick={() => {
-                          // Save updated doctor data to session storage
                           sessionStorage.setItem('doctorData', JSON.stringify(doctorData));
                         }}
                       >
@@ -505,7 +548,6 @@ const DoctorsDashboard = () => {
   );
 };
 
-// StatCard Component
 const StatCard = ({ title, value, icon: Icon, color }) => {
   const colorClasses = {
     blue: 'bg-blue-100 text-blue-600',
