@@ -223,9 +223,15 @@ const DoctorsDashboard = () => {
     if (storedData) {
       try {
         const parsedData = JSON.parse(storedData);
-        if (parsedData && parsedData.id) {
-          setDoctorData(parsedData);
-          fetchInitialData(parsedData.id);
+        // Check for either id or _id
+        if (parsedData && (parsedData.id || parsedData._id)) {
+          // Normalize the data to always use id
+          const normalizedData = {
+            ...parsedData,
+            id: parsedData.id || parsedData._id
+          };
+          setDoctorData(normalizedData);
+          fetchInitialData(normalizedData.id);
         } else {
           navigate('/login');
         }
@@ -237,17 +243,6 @@ const DoctorsDashboard = () => {
       navigate('/login');
     }
   }, [navigate]);
-
-  if (isLoading.initial || !doctorData) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
 
   // StatCard Component
   const StatCard = ({ title, value, icon: Icon, color }) => {
