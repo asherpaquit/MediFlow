@@ -47,6 +47,7 @@ const DoctorsDashboard = () => {
         throw new Error('Failed to fetch appointments');
       }
       const data = await response.json();
+      console.log("Fetched Appointments Data:", data); // ADD THIS LINE
       setUpcomingAppointments(data);
       setIsLoading(false);
     } catch (error) {
