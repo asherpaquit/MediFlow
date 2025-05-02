@@ -22,15 +22,12 @@ const DoctorsDashboard = () => {
   const [doctorData, setDoctorData] = useState(null);
 
   useEffect(() => {
-    // Get doctor data from session storage
-    const storedData = sessionStorage.getItem('doctorData');
-    if (storedData) {
-      setDoctorData(JSON.parse(storedData));
-    } else {
-      // If no doctor data found, redirect to login
-      navigate('/login');
-    }
-  }, [navigate]);
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const [upcomingAppointments] = useState([
     { id: 1, patient: 'John Smith', time: '09:30 AM', date: '2023-06-15', type: 'Follow-up', status: 'Confirmed' },
