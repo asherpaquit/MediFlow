@@ -228,8 +228,7 @@ const PatientDashboard = () => {
                 const doctor = doctors.find(d => d.doctorId === newAppointment.doctorId);
                 const formattedAppointment = {
                     ...newAppointment,
-                    doctor: `${doctors.find(d => d.doctorId === newAppointment.doctorId)?.firstname || 'Unknown'} 
-                    ${doctors.find(d => d.doctorId === newAppointment.doctorId)?.lastname || 'Doctor'}`,
+                    doctor: doctor ? `${doctor.firstname} ${doctor.lastname}` : 'Unknown Doctor',
                     status: 'Pending'
                 };
             
