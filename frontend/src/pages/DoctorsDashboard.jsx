@@ -19,38 +19,47 @@ const DoctorsDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [doctorData, setDoctorData] = useState({
-    username: 'Demo Doctor',
-    specialization: 'General Practitioner',
-    email: 'demo@example.com',
-    phone: '+1234567890'
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [doctorData, setDoctorData] = useState(null);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [patientRecords, setPatientRecords] = useState([]);
   const [notifications, setNotifications] = useState([]);
   
 
   useEffect(() => {
-    // Simulate loading data
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+    const fetchDoctorData = async () => {
+      setIsLoading(true);
+      try {
+        // Check session storage first
+        const storedData = sessionStorage.getItem('doctorData');
+        if (storedData) {
+          setDoctorData(JSON.parse(storedData));
+        } else {
+          // Fetch from API if not in session storage
+          const response = await fetch('https://mediflow-s7af.onrender.com/api/user-doctors/me', {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch doctor data');
+          }
+          
+          const data = await response.json();
+          setDoctorData(data);
+          sessionStorage.setItem('doctorData', JSON.stringify(data));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        navigate('/login');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const handleLogout = () => {
-    navigate('/login');
-  };
-
-  const filteredAppointments = upcomingAppointments.filter(appt => 
-    appt.patient?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const filteredPatients = patientRecords.filter(patient => 
-    patient.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    fetchDoctorData();
+  }, [navigate]);
 
   return (
     <div className="flex h-screen bg-gray-50">
