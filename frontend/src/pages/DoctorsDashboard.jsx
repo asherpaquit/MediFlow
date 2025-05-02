@@ -183,7 +183,7 @@ const DoctorsDashboard = () => {
                           setActiveTab(item.tab);
                           setIsMobileMenuOpen(false);
                         }}
-                        className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg ${
+                        className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
                           activeTab === item.tab
                             ? 'bg-blue-50 text-blue-600'
                             : 'text-gray-600 hover:bg-gray-100'
@@ -509,7 +509,7 @@ const DoctorsDashboard = () => {
 
                       <div className="pt-4">
                         <button
-                          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
+                          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
                           onClick={() => {
                              // Save updated doctor data (only if doctorData exists)
                              if (doctorData) {
@@ -568,3 +568,4 @@ const StatCard = ({ title, value, icon: Icon, color }) => {
 };
 
 export default DoctorsDashboard;
+
