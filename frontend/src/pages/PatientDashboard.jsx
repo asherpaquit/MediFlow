@@ -80,7 +80,7 @@ const PatientDashboard = () => {
 
     const [upcomingAppointments, setUpcomingAppointments] = useState([]);
         useEffect(() => {
-            const savedAppointments = JSON.parse(sessionStorage.getItem('appointments'));
+            const savedAppointments = JSON.parse(localStorage.getItem('appointments'));
             if (savedAppointments && Array.isArray(savedAppointments)) {
                 setUpcomingAppointments(savedAppointments);
             }
@@ -136,11 +136,7 @@ const PatientDashboard = () => {
 
     // --- Handlers ---
     const handleLogout = () => {
-        const savedAppointments = sessionStorage.getItem('appointments');
-    sessionStorage.clear();
-    if (savedAppointments) {
-        sessionStorage.setItem('appointments', savedAppointments);
-    }
+        sessionStorage.clear();
         navigate('/login');
     };
 
@@ -236,7 +232,7 @@ const PatientDashboard = () => {
             
                 setBookingStatus({ loading: false, error: null, success: 'Appointment booked successfully!' });
                 setUpcomingAppointments(updatedAppointments);
-                sessionStorage.setItem('appointments', JSON.stringify(updatedAppointments));
+                localStorage.setItem('appointments', JSON.stringify(updatedAppointments));
             
                 setSelectedDoctorId('');
                 setAppointmentDate('');
