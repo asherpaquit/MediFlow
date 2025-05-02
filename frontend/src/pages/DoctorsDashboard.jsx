@@ -11,55 +11,141 @@ import {
   LogoutIcon,
   BellIcon,
   SearchIcon,
-  CameraIcon
-} from '@heroicons/react/outline';
+  CameraIcon,
+  ArrowPathIcon,
+  XMarkIcon,
+  CheckIcon
+} from '@heroicons/react/24/outline';
 
 const DoctorsDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [doctorData, setDoctorData] = useState(null); // Initially null, assuming it might be fetched later
+  const [doctorData, setDoctorData] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [notification, setNotification] = useState({ show: false, message: '', type: '' });
 
+  // Fetch doctor data and appointments on component mount
   useEffect(() => {
-    // Attempt to load doctor data from session storage
     const storedData = sessionStorage.getItem('doctorData');
     if (storedData) {
-      setDoctorData(JSON.parse(storedData));
+      const data = JSON.parse(storedData);
+      setDoctorData(data);
+      fetchDoctorAppointments(data.doctorId);
+    } else {
+      navigate('/login');
     }
-    // REMOVED: Redirection logic if no data is found immediately.
-    // else {
-    //   // If you still want redirection logic, place it here or handle it elsewhere.
-    //   // For now, allows access without initial doctorData.
-    //   // navigate('/login');
-    // }
-  }, [navigate]); // Dependency array kept as is
+  }, [navigate]);
 
-  // REMOVED: Dummy data. Initialize with empty arrays.
-  // Assuming this data will be fetched from an API later.
-  const [upcomingAppointments, setUpcomingAppointments] = useState([]); // Made state updatable if needed
-  const [patientRecords, setPatientRecords] = useState([]); // Made state updatable if needed
-  const [notifications, setNotifications] = useState([]); // Made state updatable if needed
+  // Fetch appointments for the doctor
+  const fetchDoctorAppointments = async (doctorId) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:8080/api/appointments/doctor/${doctorId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setAppointments(data);
+      } else {
+        throw new Error('Failed to fetch appointments');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      showNotification('Failed to load appointments', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Handle appointment status updates (accept/decline)
+  const handleAppointmentAction = async (appointmentId, action) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: action })
+      });
 
+      if (response.ok) {
+        const updatedAppointment = await response.json();
+        setAppointments(prev => prev.map(appt => 
+          appt.appointmentId === appointmentId ? updatedAppointment : appt
+        ));
+        showNotification(`Appointment ${action.toLowerCase()} successfully`, 'success');
+      } else {
+        throw new Error('Failed to update appointment');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      showNotification('Failed to update appointment', 'error');
+    }
+  };
+
+  // Show notification message
+  const showNotification = (message, type) => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => setNotification({ show: false, message: '', type: '' }), 3000);
+  };
+
+  // Handle logout
   const handleLogout = () => {
     sessionStorage.removeItem('doctorData');
     sessionStorage.removeItem('isAuthenticated');
     navigate('/login');
   };
 
-  // Filtering logic remains the same, handles empty arrays gracefully
-  const filteredAppointments = upcomingAppointments.filter(appt =>
-    appt.patient.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Refresh appointments
+  const refreshAppointments = () => {
+    if (doctorData) {
+      fetchDoctorAppointments(doctorData.doctorId);
+    }
+  };
 
-  const filteredPatients = patientRecords.filter(patient =>
-    patient.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter appointments based on search query
+  const filteredAppointments = appointments.filter(appt => {
+    const patientName = `${appt.patient?.firstname || ''} ${appt.patient?.lastname || ''}`.toLowerCase();
+    return (
+      patientName.includes(searchQuery.toLowerCase()) ||
+      appt.date.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      appt.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      appt.notes?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
 
+  // Loading state
+  if (!doctorData) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  // Calculate dashboard stats
+  const today = new Date().toISOString().split('T')[0];
+  const todaysAppointments = appointments.filter(a => a.date === today).length;
+  const pendingAppointments = appointments.filter(a => a.status === 'Pending').length;
+  const uniquePatients = [...new Set(appointments.map(a => a.patient?.patientId))].length;
 
   return (
     <div className="flex h-screen bg-gray-50">
+      {/* Notification Toast */}
+      {notification.show && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-md shadow-lg flex items-center ${
+          notification.type === 'error' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+        }`}>
+          {notification.type === 'error' ? (
+            <XMarkIcon className="h-5 w-5 mr-2" />
+          ) : (
+            <CheckIcon className="h-5 w-5 mr-2" />
+          )}
+          {notification.message}
+        </div>
+      )}
+
       {/* Sidebar */}
       <div className="hidden md:flex md:flex-shrink-0">
         <div className="flex flex-col w-64 bg-white border-r border-gray-200">
@@ -134,27 +220,17 @@ const DoctorsDashboard = () => {
             <div className="flex items-center space-x-4">
               <button className="p-1 text-gray-400 hover:text-gray-500 relative">
                 <BellIcon className="w-6 h-6" />
-                {/* Display notification indicator only if there are unread notifications */}
-                {notifications.some(n => !n.read) && (
+                {pendingAppointments > 0 && (
                   <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
                 )}
               </button>
-              {/* MODIFIED: Conditionally render doctor info if doctorData exists */}
-              {doctorData ? (
-                <div className="flex items-center">
-                  <div className="ml-3">
-                    <div className="text-sm font-medium text-gray-700">Dr. {doctorData.username}</div>
-                    <div className="text-xs text-gray-500">{doctorData.specialization}</div>
-                  </div>
-                  <UserCircleIcon className="w-8 h-8 ml-2 text-gray-400" />
+              <div className="flex items-center">
+                <div className="ml-3">
+                  <div className="text-sm font-medium text-gray-700">Dr. {doctorData.firstname} {doctorData.lastname}</div>
+                  <div className="text-xs text-gray-500">{doctorData.specialization}</div>
                 </div>
-              ) : (
-                // CORRECTED: Wrapped the comment and icon in a fragment <>...</>
-                <>
-                  {/* Placeholder or loading state for user info if needed */}
-                  <UserCircleIcon className="w-8 h-8 ml-2 text-gray-400" />
-                </>
-              )}
+                <UserCircleIcon className="w-8 h-8 ml-2 text-gray-400" />
+              </div>
             </div>
           </div>
         </header>
@@ -183,7 +259,7 @@ const DoctorsDashboard = () => {
                           setActiveTab(item.tab);
                           setIsMobileMenuOpen(false);
                         }}
-                        className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                        className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg ${
                           activeTab === item.tab
                             ? 'bg-blue-50 text-blue-600'
                             : 'text-gray-600 hover:bg-gray-100'
@@ -215,102 +291,82 @@ const DoctorsDashboard = () => {
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 {/* Stats Cards now use the length of the (potentially empty) state arrays */}
-                <StatCard
-                  title="Today's Appointments"
-                  value={upcomingAppointments.length}
-                  icon={CalendarIcon}
-                  color="blue"
+                <StatCard 
+                  title="Today's Appointments" 
+                  value={todaysAppointments} 
+                  icon={CalendarIcon} 
+                  color="blue" 
                 />
-                <StatCard
-                  title="Active Patients"
-                  value={patientRecords.length}
-                  icon={UsersIcon}
-                  color="green"
+                <StatCard 
+                  title="Pending Approvals" 
+                  value={pendingAppointments} 
+                  icon={BellIcon} 
+                  color="orange" 
                 />
-                <StatCard
-                  title="Pending Actions"
-                  value={notifications.filter(n => !n.read).length}
-                  icon={BellIcon}
-                  color="orange"
+                <StatCard 
+                  title="Total Patients" 
+                  value={uniquePatients} 
+                  icon={UsersIcon} 
+                  color="green" 
                 />
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white shadow rounded-lg overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                    <h3 className="text-lg font-medium text-gray-900">Upcoming Appointments</h3>
-                  </div>
-                  {/* MODIFIED: Display message if no appointments */}
-                  {upcomingAppointments.length > 0 ? (
-                    <div className="divide-y divide-gray-200">
-                      {upcomingAppointments.slice(0, 3).map((appt) => (
-                        <div key={appt.id} className="p-4 hover:bg-gray-50 transition-colors">
-                          <div className="flex justify-between">
-                            <div>
-                              <p className="font-medium">{appt.patient}</p>
-                              <p className="text-sm text-gray-500">{appt.type}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm">{appt.time}</p>
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                appt.status === 'Confirmed'
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {appt.status}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                   ) : (
-                     <div className="p-4 text-center text-gray-500">No upcoming appointments.</div>
-                   )}
-                  <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 text-right">
-                    <button
-                      onClick={() => setActiveTab('appointments')}
-                      className="text-sm text-blue-600 hover:text-blue-800"
-                    >
-                      View all appointments →
-                    </button>
-                  </div>
+              <div className="bg-white shadow rounded-lg overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                  <h3 className="text-lg font-medium text-gray-900">Recent Appointments</h3>
+                  <button 
+                    onClick={refreshAppointments}
+                    className="flex items-center text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    <ArrowPathIcon className="w-4 h-4 mr-1" />
+                    Refresh
+                  </button>
                 </div>
-
-                <div className="bg-white shadow rounded-lg overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                    <h3 className="text-lg font-medium text-gray-900">Recent Patients</h3>
+                {loading ? (
+                  <div className="p-8 flex justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
                   </div>
-                   {/* MODIFIED: Display message if no patients */}
-                  {patientRecords.length > 0 ? (
-                    <div className="divide-y divide-gray-200">
-                      {patientRecords.slice(0, 3).map((patient) => (
-                        <div key={patient.id} className="p-4 hover:bg-gray-50 transition-colors">
-                          <div className="flex justify-between">
-                            <div>
-                              <p className="font-medium">{patient.name}</p>
-                              <p className="text-sm text-gray-500">{patient.diagnosis}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm">Last visit: {patient.lastVisit}</p>
-                              <p className="text-xs text-blue-600">Next: {patient.nextAppointment}</p>
-                            </div>
+                ) : appointments.length > 0 ? (
+                  <div className="divide-y divide-gray-200">
+                    {appointments.slice(0, 5).map((appt) => (
+                      <div key={appt.appointmentId} className="p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex justify-between">
+                          <div>
+                            <p className="font-medium">
+                              {appt.patient?.firstname} {appt.patient?.lastname}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {appt.notes || 'No notes provided'}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm">{appt.date} at {appt.time}</p>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                              appt.status === 'Confirmed' 
+                                ? 'bg-green-100 text-green-800' 
+                                : appt.status === 'Declined'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {appt.status}
+                            </span>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-4 text-center text-gray-500">No recent patients.</div>
-                  )}
-                  <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 text-right">
-                    <button
-                      onClick={() => setActiveTab('patients')}
-                      className="text-sm text-blue-600 hover:text-blue-800"
-                    >
-                      View all patients →
-                    </button>
+                      </div>
+                    ))}
                   </div>
+                ) : (
+                  <div className="p-8 text-center text-gray-500">
+                    No appointments found
+                  </div>
+                )}
+                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 text-right">
+                  <button 
+                    onClick={() => setActiveTab('appointments')}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    View all appointments →
+                  </button>
                 </div>
               </div>
             </div>
@@ -321,19 +377,32 @@ const DoctorsDashboard = () => {
             <div className="bg-white shadow rounded-lg overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
                 <h3 className="text-lg font-medium text-gray-900">Appointments</h3>
-                <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-                  + New Appointment
-                </button>
+                <div className="flex space-x-2">
+                  <button 
+                    onClick={refreshAppointments}
+                    className="flex items-center px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    <ArrowPathIcon className="w-4 h-4 mr-1" />
+                    Refresh
+                  </button>
+                </div>
               </div>
-              <div className="divide-y divide-gray-200">
-                 {/* Display message if no filtered appointments */}
-                {filteredAppointments.length > 0 ? (
-                  filteredAppointments.map((appt) => (
-                    <div key={appt.id} className="p-4 hover:bg-gray-50 transition-colors">
-                       <div className="flex flex-col sm:flex-row justify-between">
+              {loading ? (
+                <div className="p-8 flex justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+              ) : filteredAppointments.length > 0 ? (
+                <div className="divide-y divide-gray-200">
+                  {filteredAppointments.map((appt) => (
+                    <div key={appt.appointmentId} className="p-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex flex-col sm:flex-row justify-between">
                         <div className="mb-2 sm:mb-0">
-                          <p className="font-medium">{appt.patient}</p>
-                          <p className="text-sm text-gray-500">{appt.type}</p>
+                          <p className="font-medium">
+                            {appt.patient?.firstname} {appt.patient?.lastname}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {appt.notes || 'No notes provided'}
+                          </p>
                         </div>
                         <div className="flex flex-col sm:items-end">
                           <div className="flex items-center text-sm text-gray-500 mb-1">
@@ -348,74 +417,54 @@ const DoctorsDashboard = () => {
                       </div>
                       <div className="mt-2 flex justify-between items-center">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          appt.status === 'Confirmed'
-                            ? 'bg-green-100 text-green-800'
+                          appt.status === 'Confirmed' 
+                            ? 'bg-green-100 text-green-800' 
+                            : appt.status === 'Declined'
+                            ? 'bg-red-100 text-red-800'
                             : 'bg-yellow-100 text-yellow-800'
                         }`}>
                           {appt.status}
                         </span>
-                        <div className="space-x-2">
-                          <button className="text-xs text-blue-600 hover:text-blue-800">View Details</button>
-                          <button className="text-xs text-gray-600 hover:text-gray-800">Reschedule</button>
-                        </div>
+                        {appt.status === 'Pending' && (
+                          <div className="space-x-2">
+                            <button 
+                              className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded hover:bg-green-200"
+                              onClick={() => handleAppointmentAction(appt.appointmentId, 'Confirmed')}
+                            >
+                              Accept
+                            </button>
+                            <button 
+                              className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded hover:bg-red-200"
+                              onClick={() => handleAppointmentAction(appt.appointmentId, 'Declined')}
+                            >
+                              Decline
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="p-8 text-center text-gray-500">
-                    {searchQuery ? 'No appointments found matching your search.' : 'No appointments to display.'}
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-gray-500">
+                  No appointments found {searchQuery ? 'matching your search' : ''}
+                </div>
+              )}
             </div>
           )}
 
           {/* Patients Tab */}
           {activeTab === 'patients' && (
             <div className="bg-white shadow rounded-lg overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                 <h3 className="text-lg font-medium text-gray-900">Patients</h3>
-                <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-                  + Add New Patient
-                </button>
               </div>
-              <div className="divide-y divide-gray-200">
-                 {/* Display message if no filtered patients */}
-                {filteredPatients.length > 0 ? (
-                  filteredPatients.map((patient) => (
-                    <div key={patient.id} className="p-4 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                          <UserCircleIcon className="h-6 w-6 text-gray-500" />
-                        </div>
-                        <div className="ml-4 flex-1">
-                          <div className="flex items-center justify-between">
-                            <p className="font-medium">{patient.name}</p>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                              {patient.diagnosis}
-                            </span>
-                          </div>
-                          <div className="mt-1 flex items-center text-sm text-gray-500">
-                            <CalendarIcon className="flex-shrink-0 mr-1 h-4 w-4" />
-                            <span>Last visit: {patient.lastVisit}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-3 flex justify-end space-x-2">
-                        <button className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
-                          View History
-                        </button>
-                        <button className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
-                          Schedule Visit
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-8 text-center text-gray-500">
-                     {searchQuery ? 'No patients found matching your search.' : 'No patients to display.'}
-                  </div>
-                )}
+              <div className="p-6">
+                <div className="text-center py-8 text-gray-500">
+                  <UsersIcon className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">Patient management</h3>
+                  <p className="mt-1 text-sm text-gray-500">View and manage your patients</p>
+                </div>
               </div>
             </div>
           )}
@@ -427,16 +476,10 @@ const DoctorsDashboard = () => {
                 <h3 className="text-lg font-medium text-gray-900">Medical Records</h3>
               </div>
               <div className="p-6">
-                 {/* This section likely needs data fetching logic */}
                 <div className="text-center py-8 text-gray-500">
                   <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No records selected</h3>
-                  <p className="mt-1 text-sm text-gray-500">Select a patient to view their medical records</p>
-                  <div className="mt-6">
-                    <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-                      Search Patient Records
-                    </button>
-                  </div>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">Medical records</h3>
+                  <p className="mt-1 text-sm text-gray-500">Access patient medical records</p>
                 </div>
               </div>
             </div>
@@ -449,85 +492,41 @@ const DoctorsDashboard = () => {
                 <h3 className="text-lg font-medium text-gray-900">Account Settings</h3>
               </div>
               <div className="p-6">
-                 {/* MODIFIED: Render settings content only if doctorData is available */}
-                {doctorData ? (
-                  <div className="max-w-lg mx-auto space-y-6">
-                    <div className="flex flex-col items-center">
-                      <div className="relative">
-                        <UserCircleIcon className="h-24 w-24 text-gray-400" />
-                        <label className="absolute bottom-0 right-0 bg-blue-500 text-white p-2 rounded-full cursor-pointer hover:bg-blue-600">
-                          <CameraIcon className="h-4 w-4" />
-                          <input type="file" className="hidden" />
-                        </label>
-                      </div>
-                      {/* Uses optional chaining in case properties aren't available */}
-                      <h2 className="mt-4 text-lg font-medium">Dr. {doctorData.firstName ?? ''} {doctorData.lastName ?? ''}</h2>
-                      <p className="text-sm text-gray-500">{doctorData.specialization ?? 'No specialization set'}</p>
+                <div className="max-w-lg mx-auto space-y-6">
+                  <div className="flex flex-col items-center">
+                    <div className="relative">
+                      <UserCircleIcon className="h-24 w-24 text-gray-400" />
+                      <label className="absolute bottom-0 right-0 bg-blue-500 text-white p-2 rounded-full cursor-pointer hover:bg-blue-600">
+                        <CameraIcon className="h-4 w-4" />
+                        <input type="file" className="hidden" />
+                      </label>
+                    </div>
+                    <h2 className="mt-4 text-lg font-medium">Dr. {doctorData.firstname} {doctorData.lastname}</h2>
+                    <p className="text-sm text-gray-500">{doctorData.specialization}</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Email Address</label>
+                      <input
+                        type="email"
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        value={doctorData.email || ''}
+                        readOnly
+                      />
                     </div>
 
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Email Address</label>
-                        <input
-                          type="email"
-                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-gray-100" // Added bg-gray-100 for readonly
-                          value={doctorData.email ?? ''}
-                          readOnly
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Phone Number</label>
-                        <input
-                          type="tel"
-                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          value={doctorData.phone ?? ''}
-                           // Update state safely
-                          onChange={(e) => setDoctorData(prev => ({...prev, phone: e.target.value}))}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Specialization</label>
-                        <select
-                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          value={doctorData.specialization ?? ''}
-                           // Update state safely
-                          onChange={(e) => setDoctorData(prev => ({...prev, specialization: e.target.value}))}
-                        >
-                          <option>Cardiology</option>
-                          <option>Neurology</option>
-                          <option>Pediatrics</option>
-                          <option>General Practice</option>
-                          {/* Add an empty option if specialization can be unset */}
-                          {!['Cardiology', 'Neurology', 'Pediatrics', 'General Practice'].includes(doctorData.specialization ?? '') && doctorData.specialization && (
-                             <option value={doctorData.specialization}>{doctorData.specialization}</option>
-                          )}
-                          <option value="">-- Select --</option>
-                        </select>
-                      </div>
-
-                      <div className="pt-4">
-                        <button
-                          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
-                          onClick={() => {
-                             // Save updated doctor data (only if doctorData exists)
-                             if (doctorData) {
-                               sessionStorage.setItem('doctorData', JSON.stringify(doctorData));
-                               alert('Changes saved!'); // Provide feedback
-                             }
-                          }}
-                        >
-                          Save Changes
-                        </button>
-                      </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Specialization</label>
+                      <input
+                        type="text"
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        value={doctorData.specialization || ''}
+                        readOnly
+                      />
                     </div>
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    Please log in to view or edit settings.
-                  </div>
-                )}
+                </div>
               </div>
             </div>
           )}
@@ -537,7 +536,7 @@ const DoctorsDashboard = () => {
   );
 };
 
-// StatCard Component (Remains unchanged)
+// StatCard Component
 const StatCard = ({ title, value, icon: Icon, color }) => {
   const colorClasses = {
     blue: 'bg-blue-100 text-blue-600',
@@ -568,4 +567,3 @@ const StatCard = ({ title, value, icon: Icon, color }) => {
 };
 
 export default DoctorsDashboard;
-
