@@ -70,29 +70,29 @@ public class AppointmentController {
         }
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Appointment> updateAppointment(@PathVariable String id, @RequestBody Appointment updatedAppointment) {
-        Appointment appointment = appointmentService.updateAppointment(id, updatedAppointment);
-        return appointment != null ? ResponseEntity.ok(appointment) : ResponseEntity.notFound().build();
-    }
+        @PutMapping("/{id}")
+        public ResponseEntity<Appointment> updateAppointment(@PathVariable String id, @RequestBody Appointment updatedAppointment) {
+            Appointment appointment = appointmentService.updateAppointment(id, updatedAppointment);
+            return appointment != null ? ResponseEntity.ok(appointment) : ResponseEntity.notFound().build();
+        }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAppointment(@PathVariable String id) {
-        appointmentService.deleteAppointment(id);
-        return ResponseEntity.noContent().build();
-    }
+        @DeleteMapping("/{id}")
+        public ResponseEntity<Void> deleteAppointment(@PathVariable String id) {
+            appointmentService.deleteAppointment(id);
+            return ResponseEntity.noContent().build();
+        }
 
-    @GetMapping("/patient/{patientId}")
-    public ResponseEntity<List<Appointment>> getAppointmentsByPatientId(@PathVariable Long patientId) {
-        List<Appointment> appointments = appointmentService.getAppointmentsByPatientId(patientId);
+        @GetMapping("/patient/{patientId}")
+        public ResponseEntity<List<Appointment>> getAppointmentsByPatientId(@PathVariable Long patientId) {
+            List<Appointment> appointments = appointmentService.getAppointmentsByPatientId(patientId);
+            return ResponseEntity.ok(appointments);
+        }
+
+        @GetMapping("/doctor/{doctorId}")
+    public ResponseEntity<List<Appointment>> getAppointmentsByDoctorId(@PathVariable Long doctorId) {
+        List<Appointment> appointments = appointmentService.getAppointmentsByDoctorId(doctorId);
         return ResponseEntity.ok(appointments);
-    }
-
-    @GetMapping("/doctor/{doctorId}")
-public ResponseEntity<List<Appointment>> getAppointmentsByDoctorId(@PathVariable Long doctorId) {
-    List<Appointment> appointments = appointmentService.getAppointmentsByDoctorId(doctorId);
-    return ResponseEntity.ok(appointments);
-    }   
+        }   
 
     // Add this inner class to handle the appointment request data
     private static class AppointmentRequest {
