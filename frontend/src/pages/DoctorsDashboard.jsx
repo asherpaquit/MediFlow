@@ -33,7 +33,7 @@ const DoctorsDashboard = () => {
     }
   
     const parsedData = JSON.parse(storedData);
-    if (!parsedData?.id) {
+    if (!parsedData?.doctorId) {
       console.error('Invalid doctor ID');
       return;
     }
