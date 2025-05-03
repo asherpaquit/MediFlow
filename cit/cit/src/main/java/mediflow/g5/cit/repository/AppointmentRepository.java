@@ -14,10 +14,4 @@ public interface AppointmentRepository extends JpaRepository<Appointment, String
     // Option 2: Using explicit JPQL query
     @Query("SELECT a FROM Appointment a WHERE a.patient.patientId = :patientId")
     List<Appointment> findByPatientId(@Param("patientId") Long patientId);
-
-    List<Appointment> findByDoctorDoctorId(Long doctorId);
-
-    // Option 2: Using explicit JPQL query
-    @Query("SELECT a FROM Appointment a WHERE a.doctor.doctorId = :doctorId")
-    List<Appointment> findByDoctorId(@Param("doctorId") Long doctorId);
 }
