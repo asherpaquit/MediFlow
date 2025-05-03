@@ -54,4 +54,8 @@ public class AppointmentService {
     public void deleteAppointment(String id) {
         appointmentRepository.deleteById(id);
     }
+
+    public List<Appointment> getAppointmentsByDoctorId(Long doctorId) {
+        return appointmentRepository.findByDoctorDoctorId(doctorId);
+    }
 }
