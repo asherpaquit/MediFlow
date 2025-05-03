@@ -49,7 +49,7 @@ const DoctorsDashboard = () => {
     
     setIsLoading(true);
     try {
-      const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}`, {
+      const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorData.doctorId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
