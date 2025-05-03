@@ -30,46 +30,28 @@ const DoctorsDashboard = () => {
     if (storedData) {
       const parsedData = JSON.parse(storedData);
       setDoctorData(parsedData);
-      fetchDoctorAppointments(parsedData.id); // Use parsedData.id directly
+      fetchDoctorAppointments(parsedData.id); // Use doctorId directly
     } else {
-      navigate('/login');
+      navigate('/login'); // Redirect if no data
     }
   }, [navigate]);
 
   const fetchDoctorAppointments = async (doctorId) => {
-    if (!doctorId) {
-      console.error('No doctorId provided');
-      // Try to get doctorId from doctorData if it exists
-      if (doctorData?.id) {
-        doctorId = doctorData.id;
-      } else {
-        return;
-      }
-    }
-    
     setIsLoading(true);
     try {
-      const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
+      const response = await fetch(
+        `https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}`
+      );
       const data = await response.json();
       setUpcomingAppointments(data);
     } catch (error) {
-      console.error('Error fetching appointments:', error);
+      console.error('Fetch error:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
     sessionStorage.removeItem('doctorData');
     navigate('/login');
   };
