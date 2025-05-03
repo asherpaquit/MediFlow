@@ -88,6 +88,12 @@ public class AppointmentController {
         return ResponseEntity.ok(appointments);
     }
 
+    @GetMapping("/doctor/{doctorId}")
+public ResponseEntity<List<Appointment>> getAppointmentsByDoctorId(@PathVariable Long doctorId) {
+    List<Appointment> appointments = appointmentService.getAppointmentsByDoctorId(doctorId);
+    return ResponseEntity.ok(appointments);
+    }   
+
     // Add this inner class to handle the appointment request data
     private static class AppointmentRequest {
         private Long doctorId;
