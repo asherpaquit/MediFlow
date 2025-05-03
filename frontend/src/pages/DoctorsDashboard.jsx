@@ -27,27 +27,45 @@ const DoctorsDashboard = () => {
 
   useEffect(() => {
     const storedData = sessionStorage.getItem('doctorData');
-    if (storedData) {
-      const parsedData = JSON.parse(storedData);
-      setDoctorData(parsedData);
-      fetchDoctorAppointments(parsedData.id); // Use doctorId directly
-    } else {
-      navigate('/login'); // Redirect if no data
+    if (!storedData) {
+      navigate('/login');
+      return;
     }
+  
+    const parsedData = JSON.parse(storedData);
+    if (!parsedData?.id) {
+      console.error('Invalid doctor ID');
+      return;
+    }
+  
+    fetchDoctorAppointments(parsedData.id)
+      .then(data => setUpcomingAppointments(data))
+      .catch(error => console.error('Failed to load:', error));
   }, [navigate]);
 
   const fetchDoctorAppointments = async (doctorId) => {
-    setIsLoading(true);
     try {
       const response = await fetch(
-        `https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}`
+        `https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}`,
+        {
+          method: 'GET', 
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
       );
+  
+      if (!response.ok) {
+        const errorData = await response.json(); // Get detailed error
+        console.error('API Error:', errorData);
+        throw new Error(`HTTP ${response.status}: ${errorData.message || 'Unknown error'}`);
+      }
+  
       const data = await response.json();
-      setUpcomingAppointments(data);
+      return data;
     } catch (error) {
-      console.error('Fetch error:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Fetch failed:', error);
+      throw error;
     }
   };
 
@@ -149,10 +167,8 @@ const DoctorsDashboard = () => {
     }
   };
 
-  const filteredAppointments = upcomingAppointments.filter(appt =>
-    appt.patient?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    appt.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    appt.status?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredAppointments = (upcomingAppointments || []).filter(appt =>
+    appt.patient?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredPatients = patientRecords.filter(patient =>
