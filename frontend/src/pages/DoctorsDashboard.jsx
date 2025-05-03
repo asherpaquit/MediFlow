@@ -28,8 +28,9 @@ const DoctorsDashboard = () => {
   useEffect(() => {
     const storedData = sessionStorage.getItem('doctorData');
     if (storedData) {
-      setDoctorData(JSON.parse(storedData));
-      fetchDoctorAppointments(JSON.parse(storedData).id);
+      const parsedData = JSON.parse(storedData);
+      setDoctorData(parsedData);
+      fetchDoctorAppointments(parsedData.id); // Use parsedData.id directly
     } else {
       navigate('/login');
     }
@@ -38,7 +39,12 @@ const DoctorsDashboard = () => {
   const fetchDoctorAppointments = async (doctorId) => {
     if (!doctorId) {
       console.error('No doctorId provided');
-      return;
+      // Try to get doctorId from doctorData if it exists
+      if (doctorData?.id) {
+        doctorId = doctorData.id;
+      } else {
+        return;
+      }
     }
     
     setIsLoading(true);
@@ -57,7 +63,6 @@ const DoctorsDashboard = () => {
       setUpcomingAppointments(data);
     } catch (error) {
       console.error('Error fetching appointments:', error);
-      // Optionally show error to user
     } finally {
       setIsLoading(false);
     }
