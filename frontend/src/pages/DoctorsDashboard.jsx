@@ -565,7 +565,7 @@ const PrescriptionsTab = ({ doctorId }) => {
       setIsLoading(true);
       try {
         // Fetch prescriptions
-        const prescriptionsResponse = await fetch(`http://localhost:8080/api/prescriptions/doctor/${doctorId}`);
+        const prescriptionsResponse = await fetch(`https://mediflow-s7af.onrender.com/api/prescriptions/doctor/${doctorId}`);
         if (!prescriptionsResponse.ok) throw new Error('Failed to fetch prescriptions');
         const prescriptionsData = await prescriptionsResponse.json();
         setPrescriptions(prescriptionsData);
