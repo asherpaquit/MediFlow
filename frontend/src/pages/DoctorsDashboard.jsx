@@ -595,7 +595,6 @@ const MedicalRecordsTab = ({ doctorId }) => {
 };
 
 // Prescriptions Tab Component
-// Prescriptions Tab Component
 const PrescriptionsTab = ({ doctorId }) => {
   const [prescriptions, setPrescriptions] = useState([]);
   const [appointments, setAppointments] = useState([]);
@@ -611,28 +610,34 @@ const PrescriptionsTab = ({ doctorId }) => {
 
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch prescriptions
-        const prescriptionsResponse = await fetch(`https://mediflow-s7af.onrender.com/api/prescriptions/doctor/${doctorId}`);
-        if (!prescriptionsResponse.ok) throw new Error('Failed to fetch prescriptions');
-        const prescriptionsData = await prescriptionsResponse.json();
-        setPrescriptions(prescriptionsData);
+        setIsLoading(true);
+        try {
+            console.log('Fetching confirmed appointments for doctor ID:', doctorId);
 
-        // Fetch confirmed appointments
-        const appointmentsResponse = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}/status/Confirmed`);
-        if (!appointmentsResponse.ok) throw new Error('Failed to fetch appointments');
-        const appointmentsData = await appointmentsResponse.json();
-        setAppointments(appointmentsData);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setIsLoading(false);
-      }
+            // Fetch confirmed appointments
+            const appointmentsResponse = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}/status/Confirmed`);
+            if (!appointmentsResponse.ok) throw new Error('Failed to fetch appointments');
+            
+            const appointmentsData = await appointmentsResponse.json();
+            console.log('Confirmed Appointments:', appointmentsData);
+            setAppointments(appointmentsData);
+
+            // Fetch prescriptions
+            const prescriptionsResponse = await fetch(`https://mediflow-s7af.onrender.com/api/prescriptions/doctor/${doctorId}`);
+            if (!prescriptionsResponse.ok) throw new Error('Failed to fetch prescriptions');
+            
+            const prescriptionsData = await prescriptionsResponse.json();
+            console.log('Prescriptions:', prescriptionsData);
+            setPrescriptions(prescriptionsData);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     fetchData();
-  }, [doctorId]);
+}, [doctorId]);
 
   const handleCreatePrescription = async (e) => {
     e.preventDefault();
