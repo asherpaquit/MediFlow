@@ -342,20 +342,23 @@ const AppointmentsTab = ({ doctorId, onStatusChange }) => {
 // Patients Tab Component
 const PatientsTab = ({ doctorId, refreshTrigger }) => {
   const [patients, setPatients] = useState([]);
+  const [appointments, setAppointments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
+        console.log('Fetching confirmed appointments for doctor ID:', doctorId);
+
         const appointmentsResponse = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}/status/Confirmed`);
         if (!appointmentsResponse.ok) throw new Error('Failed to fetch appointments');
-        
+
         const appointmentsData = await appointmentsResponse.json();
         console.log('Confirmed Appointments:', appointmentsData); // Debug log
         setAppointments(appointmentsData);
     } catch (error) {
-        console.error('Error fetching appointments:', error);
+        console.error('Error fetching data:', error);
     } finally {
         setIsLoading(false);
     }
@@ -614,13 +617,13 @@ const PrescriptionsTab = ({ doctorId }) => {
       setIsLoading(true);
       try {
         // Fetch prescriptions
-        const prescriptionsResponse = await fetch(`http://localhost:8080/api/prescriptions/doctor/${doctorId}`);
+        const prescriptionsResponse = await fetch(`https://mediflow-s7af.onrender.com/api/prescriptions/doctor/${doctorId}`);
         if (!prescriptionsResponse.ok) throw new Error('Failed to fetch prescriptions');
         const prescriptionsData = await prescriptionsResponse.json();
         setPrescriptions(prescriptionsData);
 
         // Fetch confirmed appointments
-        const appointmentsResponse = await fetch(`http://localhost:8080/api/appointments/doctor/${doctorId}/status/Confirmed`);
+        const appointmentsResponse = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}/status/Confirmed`);
         if (!appointmentsResponse.ok) throw new Error('Failed to fetch appointments');
         const appointmentsData = await appointmentsResponse.json();
         setAppointments(appointmentsData);
