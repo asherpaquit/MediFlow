@@ -113,5 +113,5 @@ public class AppointmentController {
 
         Optional<Appointment> updated = appointmentService.updateAppointmentStatus(id, newStatus);
         return updated.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
-    }
+    } //
 }
