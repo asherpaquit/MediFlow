@@ -173,36 +173,68 @@ const AppointmentsTab = ({ doctorId, onStatusChange }) => {
   };
 
   const handleStatusUpdate = async (appointmentId, newStatus) => {
-    const action = newStatus === 'Confirmed' ? 'confirm' : 'cancel';
-    if (window.confirm(`Are you sure you want to ${action} this appointment?`)) {
-      setUpdatingAppointments(prev => ({...prev, [appointmentId]: true}));
-      try {
-        const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/${appointmentId}/status`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: newStatus })
-        });
+    if (newStatus === 'Cancelled') {
+        if (!window.confirm('Are you sure you want to cancel and delete this appointment?')) return;
 
-        if (!response.ok) throw new Error('Failed to update appointment status');
-        
-        setNotification({
-          type: 'success',
-          message: `Appointment ${action}ed successfully`
-        });
-        
-        await fetchAppointments();
-        onStatusChange();
-      } catch (error) {
-        console.error('Error updating appointment status:', error);
-        setNotification({
-          type: 'error',
-          message: `Failed to ${action} appointment`
-        });
-      } finally {
-        setUpdatingAppointments(prev => ({...prev, [appointmentId]: false}));
-      }
+        setUpdatingAppointments((prev) => ({ ...prev, [appointmentId]: true }));
+        try {
+            // Send DELETE request to remove the appointment
+            const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/${appointmentId}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+            });
+
+            if (!response.ok) throw new Error('Failed to delete appointment');
+
+            setNotification({
+                type: 'success',
+                message: 'Appointment deleted successfully',
+            });
+
+            // Remove the appointment from the state
+            setAppointments((prev) => prev.filter((appt) => appt.appointmentId !== appointmentId));
+            onStatusChange();
+        } catch (error) {
+            console.error('Error deleting appointment:', error);
+            setNotification({
+                type: 'error',
+                message: 'Failed to delete appointment',
+            });
+        } finally {
+            setUpdatingAppointments((prev) => ({ ...prev, [appointmentId]: false }));
+        }
+    } else {
+        // Handle other status updates (e.g., Confirmed)
+        if (!window.confirm('Are you sure you want to confirm this appointment?')) return;
+
+        setUpdatingAppointments((prev) => ({ ...prev, [appointmentId]: true }));
+        try {
+            const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/${appointmentId}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus }),
+            });
+
+            if (!response.ok) throw new Error('Failed to update appointment status');
+
+            setNotification({
+                type: 'success',
+                message: 'Appointment confirmed successfully',
+            });
+
+            await fetchAppointments();
+            onStatusChange();
+        } catch (error) {
+            console.error('Error updating appointment status:', error);
+            setNotification({
+                type: 'error',
+                message: 'Failed to update appointment status',
+            });
+        } finally {
+            setUpdatingAppointments((prev) => ({ ...prev, [appointmentId]: false }));
+        }
     }
-  };
+};
 
   useEffect(() => {
     fetchAppointments();
