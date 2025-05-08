@@ -191,14 +191,20 @@ const PatientDashboard = () => {
 
         setCancellingAppointment(appointmentId);
         try {
+            console.log('Cancelling appointment with ID:', appointmentId);
+
             const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/${appointmentId}/status`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'Cancelled' })
+                body: JSON.stringify({ status: 'Cancelled' }),
             });
 
-            if (!response.ok) throw new Error('Failed to cancel appointment');
-            
+            if (!response.ok) {
+                const errorDetails = await response.text();
+                console.error('Error details:', errorDetails);
+                throw new Error('Failed to cancel appointment');
+            }
+
             await fetchAppointments();
             alert('Appointment cancelled successfully');
         } catch (error) {
