@@ -108,7 +108,7 @@ const PatientDashboard = () => {
 
         setIsLoadingAppointments(true);
         try {
-            const response = await fetch(`http://localhost:8080/api/appointments/patient/${patientData.patientId}`);
+            const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/patient/${patientData.patientId}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch appointments');
             }
@@ -118,7 +118,7 @@ const PatientDashboard = () => {
             const formattedAppointments = await Promise.all(
                 data.map(async (appointment) => {
                     try {
-                        const doctorResponse = await fetch(`http://localhost:8080/api/user-doctors/${appointment.doctorId}`);
+                        const doctorResponse = await fetch(`https://mediflow-s7af.onrender.com/api/user-doctors/${appointment.doctorId}`);
                         if (doctorResponse.ok) {
                             const doctor = await doctorResponse.json();
                             return {
@@ -166,7 +166,7 @@ const PatientDashboard = () => {
         const fetchDoctors = async () => {
             setFetchDoctorsStatus({ loading: true, error: null });
             try {
-                const response = await fetch('http://localhost:8080/api/user-doctors');
+                const response = await fetch('https://mediflow-s7af.onrender.com/api/user-doctors');
                 if (response.ok) {
                     const data = await response.json();
                     setDoctors(data);
@@ -191,7 +191,7 @@ const PatientDashboard = () => {
 
         setCancellingAppointment(appointmentId);
         try {
-            const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/status`, {
+            const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/${appointmentId}/status`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: 'Cancelled' })
@@ -227,7 +227,7 @@ const PatientDashboard = () => {
 
     const handleSaveProfile = async () => {
         try {
-            const response = await fetch(`http://localhost:8080/api/user-patients/${patientData.patientId}`, { 
+            const response = await fetch(`https://mediflow-s7af.onrender.com/api/user-patients/${patientData.patientId}`, { 
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(editableData),
@@ -288,7 +288,7 @@ const PatientDashboard = () => {
         };
 
         try {
-            const response = await fetch('http://localhost:8080/api/appointments', {
+            const response = await fetch('https://mediflow-s7af.onrender.com/api/appointments', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(appointmentPayload),
