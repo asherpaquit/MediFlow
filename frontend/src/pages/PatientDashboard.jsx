@@ -335,6 +335,15 @@ const PatientDashboard = () => {
         }
     };
 
+    const getTodayDate = () => {
+        const today = new Date();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const year = today.getFullYear();
+        return `${year}-${month}-${day}`;
+    };
+    
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50">
             {/* --- Navbar --- */}
