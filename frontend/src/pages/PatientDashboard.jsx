@@ -185,7 +185,7 @@ const PatientDashboard = () => {
         }
     }, []);
 
-    // --- Cancel Appointment Handler ---
+ 
     const handleCancelAppointment = async (appointmentId) => {
         if (!window.confirm('Are you sure you want to cancel this appointment?')) return;
 
