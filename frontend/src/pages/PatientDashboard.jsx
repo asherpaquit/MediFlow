@@ -265,75 +265,74 @@ const PatientDashboard = () => {
     const handleBookingSubmit = async (e) => {
         e.preventDefault();
         setBookingStatus({ loading: true, error: null, success: null });
-
+      
         if (!selectedDoctorId || !appointmentDate || !appointmentTime) {
-            setBookingStatus({ loading: false, error: 'Please select a doctor, date, and time.', success: null });
-            return;
+          setBookingStatus({ loading: false, error: 'Please select a doctor, date, and time.', success: null });
+          return;
         }
-
+      
         if (!patientData || !patientData.patientId) {
-            setBookingStatus({ loading: false, error: 'Patient information is missing. Please try logging in again.', success: null });
-            return;
+          setBookingStatus({ loading: false, error: 'Patient information is missing. Please try logging in again.', success: null });
+          return;
         }
-
+      
         const formattedDate = new Date(appointmentDate).toISOString().split('T')[0];
         const formattedTime = appointmentTime;
-
+      
         const appointmentPayload = {
-            patientId: patientData.patientId,
-            doctorId: parseInt(selectedDoctorId, 10),
-            date: formattedDate,
-            time: formattedTime,
-            notes: appointmentReason || null,
+          patientId: Number(patientData.patientId), // Convert to number
+          doctorId: Number(selectedDoctorId), // Convert to number
+          date: formattedDate,
+          time: formattedTime,
+          notes: appointmentReason || null,
         };
-
+      
         try {
-            const response = await fetch('https://mediflow-s7af.onrender.com/api/appointments', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(appointmentPayload),
-            });
-
-            if (response.ok) {
-                const newAppointment = await response.json();
-                const doctor = doctors.find(d => d.doctorId === newAppointment.doctorId);
-                const formattedAppointment = {
-                    ...newAppointment,
-                    doctor: doctor ? `${doctor.firstName} ${doctor.lastName}` : 'Unknown Doctor',
-                    status: 'Pending',
-                    date: new Date(newAppointment.date).toLocaleDateString(),
-                };
-            
-                const updatedAppointments = [...upcomingAppointments, formattedAppointment];
-            
-                setBookingStatus({ loading: false, error: null, success: 'Appointment booked successfully!' });
-                setUpcomingAppointments(updatedAppointments);
-                localStorage.setItem('appointments', JSON.stringify(updatedAppointments));
-            
-                setSelectedDoctorId('');
-                setAppointmentDate('');
-                setAppointmentTime('');
-                setAppointmentReason('');
-                setTimeout(() => setBookingStatus(prev => ({ ...prev, success: null })), 5000);
-            
+          const response = await fetch('http://localhost:8080/api/appointments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(appointmentPayload),
+          });
+      
+          if (response.ok) {
+            const newAppointment = await response.json();
+            const doctor = doctors.find((d) => d.doctorId === newAppointment.doctorId);
+            const formattedAppointment = {
+              ...newAppointment,
+              doctor: doctor ? `${doctor.firstName} ${doctor.lastName}` : 'Unknown Doctor',
+              status: 'Pending',
+              date: new Date(newAppointment.date).toLocaleDateString(),
+            };
+      
+            const updatedAppointments = [...upcomingAppointments, formattedAppointment];
+      
+            setBookingStatus({ loading: false, error: null, success: 'Appointment booked successfully!' });
+            setUpcomingAppointments(updatedAppointments);
+            localStorage.setItem('appointments', JSON.stringify(updatedAppointments));
+      
+            setSelectedDoctorId('');
+            setAppointmentDate('');
+            setAppointmentTime('');
+            setAppointmentReason('');
+            setTimeout(() => setBookingStatus((prev) => ({ ...prev, success: null })), 5000);
+          } else {
+            const contentType = response.headers.get('content-type');
+            let errorMessage = 'Failed to book appointment.';
+      
+            if (contentType && contentType.includes('application/json')) {
+              const errorData = await response.json();
+              errorMessage = errorData?.message || errorMessage;
             } else {
-                const errorData = await response.json();
-                const errorMessage = errorData?.message || errorData || 'Failed to book appointment.';
-                throw new Error(errorMessage);
+              errorMessage = await response.text(); 
             }
+      
+            throw new Error(errorMessage);
+          }
         } catch (err) {
-            console.error("Error booking appointment:", err);
-            setBookingStatus({ loading: false, error: err.message || 'An error occurred during booking.', success: null });
-            setTimeout(() => setBookingStatus(prev => ({ ...prev, error: null })), 5000);
+          console.error('Error booking appointment:', err);
+          setBookingStatus({ loading: false, error: err.message || 'An error occurred during booking.', success: null });
+          setTimeout(() => setBookingStatus((prev) => ({ ...prev, error: null })), 5000);
         }
-    };
-
-    const getTodayDate = () => {
-        const today = new Date();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        const year = today.getFullYear();
-        return `${year}-${month}-${day}`;
     };
 
     return (

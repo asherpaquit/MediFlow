@@ -73,7 +73,7 @@ public class AppointmentController {
             }
 
             Appointment appointment = new Appointment();
-            appointment.setAppointmentId(String.valueOf(Long.valueOf(UUID.randomUUID().toString())));
+            appointment.setAppointmentId(UUID.randomUUID().toString()); // Use UUID directly as a string
             appointment.setDoctor(doctorOpt.get());
             appointment.setPatient(patientOpt.get());
             appointment.setDate(appointmentRequest.getDate());
@@ -113,5 +113,5 @@ public class AppointmentController {
 
         Optional<Appointment> updated = appointmentService.updateAppointmentStatus(id, newStatus);
         return updated.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
-    } //
+    }
 }
