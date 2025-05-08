@@ -177,7 +177,7 @@ const AppointmentsTab = ({ doctorId, onStatusChange }) => {
     if (window.confirm(`Are you sure you want to ${action} this appointment?`)) {
       setUpdatingAppointments(prev => ({...prev, [appointmentId]: true}));
       try {
-        const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/${appointmentId}/status`, {
+        const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/status`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: newStatus })
