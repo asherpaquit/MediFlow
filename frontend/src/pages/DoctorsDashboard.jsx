@@ -572,7 +572,7 @@ const PrescriptionsTab = ({ doctorId }) => {
         setPrescriptions(prescriptionsData);
 
         // Fetch confirmed appointments
-        const appointmentsResponse = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}/status/Confirmed`);
+        const appointmentsResponse = await fetch(`http:.//localhost:8080/api/appointments/doctor/${doctorId}/status/Confirmed`);
         if (!appointmentsResponse.ok) throw new Error('Failed to fetch appointments');
         const appointmentsData = await appointmentsResponse.json();
         setAppointments(appointmentsData);
