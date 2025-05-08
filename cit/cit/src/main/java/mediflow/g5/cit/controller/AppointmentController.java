@@ -1,5 +1,6 @@
 package mediflow.g5.cit.controller;
 
+import mediflow.g5.cit.dto.AppointmentRequest;
 import mediflow.g5.cit.entity.Appointment;
 import mediflow.g5.cit.entity.UserDoctor;
 import mediflow.g5.cit.entity.UserPatient;
@@ -10,9 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/appointments")
@@ -22,11 +21,32 @@ public class AppointmentController {
     private AppointmentService appointmentService;
 
     @Autowired
-    private UserDoctorService userDoctorService; // Inject UserDoctorService
+    private UserDoctorService userDoctorService;
 
     @GetMapping
     public List<Appointment> getAllAppointments() {
         return appointmentService.getAllAppointments();
+    }
+
+    @GetMapping("/doctor/{doctorId}")
+    public ResponseEntity<List<Appointment>> getAppointmentsByDoctorId(@PathVariable Long doctorId) {
+        List<Appointment> appointments = appointmentService.getAppointmentsByDoctorId(doctorId);
+        return ResponseEntity.ok(appointments);
+    }
+
+    @GetMapping("/doctor/{doctorId}/status/{status}")
+    public ResponseEntity<List<Appointment>> getAppointmentsByDoctorAndStatus(
+            @PathVariable Long doctorId,
+            @PathVariable String status) {
+
+        List<Appointment> appointments = appointmentService.getAppointmentsByDoctorIdAndStatus(doctorId, status);
+        return ResponseEntity.ok(appointments);
+    }
+
+    @GetMapping("/patient/{patientId}")
+    public ResponseEntity<List<Appointment>> getAppointmentsByPatientId(@PathVariable Long patientId) {
+        List<Appointment> appointments = appointmentService.getAppointmentsByPatientId(patientId);
+        return ResponseEntity.ok(appointments);
     }
 
     @GetMapping("/{id}")
@@ -38,7 +58,6 @@ public class AppointmentController {
     @PostMapping
     public ResponseEntity<?> createAppointment(@RequestBody AppointmentRequest appointmentRequest) {
         try {
-            // Validate request
             if (appointmentRequest.getDoctorId() == null ||
                     appointmentRequest.getPatientId() == null ||
                     appointmentRequest.getDate() == null ||
@@ -46,34 +65,35 @@ public class AppointmentController {
                 return ResponseEntity.badRequest().body("Missing required fields");
             }
 
-            // Fetch doctor and patient
-            UserDoctor doctor = userDoctorService.getDoctorById(appointmentRequest.getDoctorId()).orElse(null);
-            UserPatient patient = appointmentService.getPatientById(appointmentRequest.getPatientId()).orElse(null); //Added getPatientById()
+            Optional<UserDoctor> doctorOpt = userDoctorService.getDoctorById(appointmentRequest.getDoctorId());
+            Optional<UserPatient> patientOpt = appointmentService.getPatientById(appointmentRequest.getPatientId());
 
-            if (doctor == null || patient == null) {
+            if (doctorOpt.isEmpty() || patientOpt.isEmpty()) {
                 return ResponseEntity.badRequest().body("Invalid doctor or patient ID");
             }
 
-            // Create appointment
             Appointment appointment = new Appointment();
-            appointment.setAppointmentId(UUID.randomUUID().toString()); // Use UUID for IDs
+            appointment.setAppointmentId(String.valueOf(Long.valueOf(UUID.randomUUID().toString())));
+            appointment.setDoctor(doctorOpt.get());
+            appointment.setPatient(patientOpt.get());
             appointment.setDate(appointmentRequest.getDate());
             appointment.setTime(appointmentRequest.getTime());
-            appointment.setStatus("Pending"); // Initial status
-            appointment.setDoctor(doctor);
-            appointment.setPatient(patient);
+            appointment.setStatus("Pending");
 
-            Appointment createdAppointment = appointmentService.createAppointment(appointment);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdAppointment);
+            return ResponseEntity.status(HttpStatus.CREATED).body(appointmentService.createAppointment(appointment));
+
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error creating appointment: " + e.getMessage());
         }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Appointment> updateAppointment(@PathVariable String id, @RequestBody Appointment updatedAppointment) {
-        Appointment appointment = appointmentService.updateAppointment(id, updatedAppointment);
-        return appointment != null ? ResponseEntity.ok(appointment) : ResponseEntity.notFound().build();
+    public ResponseEntity<Appointment> updateAppointment(@PathVariable String id, @RequestBody Appointment appointment) {
+        Appointment updated = appointmentService.updateAppointment(id, appointment);
+        if (updated != null) {
+            return ResponseEntity.ok(updated);
+        }
+        return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")
@@ -82,59 +102,16 @@ public class AppointmentController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/patient/{patientId}")
-    public ResponseEntity<List<Appointment>> getAppointmentsByPatientId(@PathVariable Long patientId) {
-        List<Appointment> appointments = appointmentService.getAppointmentsByPatientId(patientId);
-        return ResponseEntity.ok(appointments);
-    }
-
-    // Add this inner class to handle the appointment request data
-    private static class AppointmentRequest {
-        private Long doctorId;
-        private Long patientId;
-        private String date;
-        private String time;
-        private String notes; // Added notes
-
-        public Long getDoctorId() {
-            return doctorId;
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Appointment> updateAppointmentStatus(
+            @PathVariable String id,
+            @RequestBody Map<String, String> statusUpdate) {
+        String newStatus = statusUpdate.get("status");
+        if (newStatus == null || !(newStatus.equals("Confirmed") || newStatus.equals("Cancelled"))) {
+            return ResponseEntity.badRequest().build();
         }
 
-        public void setDoctorId(Long doctorId) {
-            this.doctorId = doctorId;
-        }
-
-        public Long getPatientId() {
-            return patientId;
-        }
-
-        public void setPatientId(Long patientId) {
-            this.patientId = patientId;
-        }
-
-        public String getDate() {
-            return date;
-        }
-
-        public void setDate(String date) {
-            this.date = date;
-        }
-
-        public String getTime() {
-            return time;
-        }
-
-        public void setTime(String time) {
-            this.time = time;
-        }
-
-        public String getNotes() {
-            return notes;
-        }
-
-        public void setNotes(String notes) {
-            this.notes = notes;
-        }
+        Optional<Appointment> updated = appointmentService.updateAppointmentStatus(id, newStatus);
+        return updated.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 }
-

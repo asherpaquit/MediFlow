@@ -11,7 +11,9 @@ import {
     ClockIcon,
     DocumentTextIcon,
     UserCircleIcon,
-    HomeIcon
+    HomeIcon,
+    RefreshIcon,
+    TrashIcon
 } from '@heroicons/react/outline';
 
 // --- StatCard Component ---
@@ -69,7 +71,7 @@ const ProfileField = ({ label, name, value, isEditing, onChange, type = "text" }
 const PatientDashboard = () => {
     const navigate = useNavigate();
 
-    // --- Existing State ---
+    // --- State Management ---
     const storedPatientData = JSON.parse(sessionStorage.getItem('patientData'));
     const [patientData, setPatientData] = useState(storedPatientData || {});
     const [editableData, setEditableData] = useState(storedPatientData || {});
@@ -77,18 +79,12 @@ const PatientDashboard = () => {
     const [profileImage, setProfileImage] = useState(() => sessionStorage.getItem('profileImage') || '');
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
     const [upcomingAppointments, setUpcomingAppointments] = useState([]);
-        useEffect(() => {
-            const savedAppointments = JSON.parse(localStorage.getItem('appointments'));
-            if (savedAppointments && Array.isArray(savedAppointments)) {
-                setUpcomingAppointments(savedAppointments);
-            }
-        }, []);
-
+    const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
     const [medicalRecords] = useState([]);
+    const [cancellingAppointment, setCancellingAppointment] = useState(null);
 
-    // --- NEW State for Appointment Booking ---
+    // --- Appointment Booking State ---
     const [doctors, setDoctors] = useState([]);
     const [selectedDoctorId, setSelectedDoctorId] = useState('');
     const [appointmentDate, setAppointmentDate] = useState('');
@@ -106,12 +102,71 @@ const PatientDashboard = () => {
         { id: 'profile', name: 'Profile', icon: UserCircleIcon },
     ];
 
+    // --- Fetch Appointments from Backend ---
+    const fetchAppointments = async () => {
+        if (!patientData || !patientData.patientId) return;
+
+        setIsLoadingAppointments(true);
+        try {
+            const response = await fetch(`http://localhost:8080/api/appointments/patient/${patientData.patientId}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch appointments');
+            }
+            const data = await response.json();
+            
+            // Format appointments with doctor names
+            const formattedAppointments = await Promise.all(
+                data.map(async (appointment) => {
+                    try {
+                        const doctorResponse = await fetch(`http://localhost:8080/api/user-doctors/${appointment.doctorId}`);
+                        if (doctorResponse.ok) {
+                            const doctor = await doctorResponse.json();
+                            return {
+                                ...appointment,
+                                doctor: `Dr. ${doctor.firstName} ${doctor.lastName}`,
+                                date: new Date(appointment.date).toLocaleDateString(),
+                            };
+                        }
+                        return {
+                            ...appointment,
+                            doctor: 'Unknown Doctor',
+                            date: new Date(appointment.date).toLocaleDateString(),
+                        };
+                    } catch (err) {
+                        console.error("Error fetching doctor details:", err);
+                        return {
+                            ...appointment,
+                            doctor: 'Unknown Doctor',
+                            date: new Date(appointment.date).toLocaleDateString(),
+                        };
+                    }
+                })
+            );
+            
+            setUpcomingAppointments(formattedAppointments);
+            localStorage.setItem('appointments', JSON.stringify(formattedAppointments));
+        } catch (error) {
+            console.error('Error fetching appointments:', error);
+            // Fallback to local storage if API fails
+            const savedAppointments = JSON.parse(localStorage.getItem('appointments'));
+            if (savedAppointments && Array.isArray(savedAppointments)) {
+                setUpcomingAppointments(savedAppointments);
+            }
+        } finally {
+            setIsLoadingAppointments(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchAppointments();
+    }, [patientData?.patientId]);
+
     // --- Effect to Fetch Doctors ---
     useEffect(() => {
         const fetchDoctors = async () => {
             setFetchDoctorsStatus({ loading: true, error: null });
             try {
-                const response = await fetch('https://mediflow-s7af.onrender.com/api/user-doctors');
+                const response = await fetch('http://localhost:8080/api/user-doctors');
                 if (response.ok) {
                     const data = await response.json();
                     setDoctors(data);
@@ -128,8 +183,31 @@ const PatientDashboard = () => {
         if (doctors.length === 0) {
             fetchDoctors();
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // --- Cancel Appointment Handler ---
+    const handleCancelAppointment = async (appointmentId) => {
+        if (!window.confirm('Are you sure you want to cancel this appointment?')) return;
+
+        setCancellingAppointment(appointmentId);
+        try {
+            const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'Cancelled' })
+            });
+
+            if (!response.ok) throw new Error('Failed to cancel appointment');
+            
+            await fetchAppointments();
+            alert('Appointment cancelled successfully');
+        } catch (error) {
+            console.error('Error cancelling appointment:', error);
+            alert('Failed to cancel appointment');
+        } finally {
+            setCancellingAppointment(null);
+        }
+    };
 
     // --- Handlers ---
     const handleLogout = () => {
@@ -149,7 +227,7 @@ const PatientDashboard = () => {
 
     const handleSaveProfile = async () => {
         try {
-            const response = await fetch(`https://mediflow-s7af.onrender.com/api/user-patients/${patientData.patientId}`, { 
+            const response = await fetch(`http://localhost:8080/api/user-patients/${patientData.patientId}`, { 
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(editableData),
@@ -183,7 +261,7 @@ const PatientDashboard = () => {
         }
     };
 
-    // --- NEW Handler for Booking Appointment ---
+    // --- Handler for Booking Appointment ---
     const handleBookingSubmit = async (e) => {
         e.preventDefault();
         setBookingStatus({ loading: true, error: null, success: null });
@@ -210,7 +288,7 @@ const PatientDashboard = () => {
         };
 
         try {
-            const response = await fetch('https://mediflow-s7af.onrender.com/api/appointments', {
+            const response = await fetch('http://localhost:8080/api/appointments', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(appointmentPayload),
@@ -222,7 +300,8 @@ const PatientDashboard = () => {
                 const formattedAppointment = {
                     ...newAppointment,
                     doctor: doctor ? `${doctor.firstName} ${doctor.lastName}` : 'Unknown Doctor',
-                    status: 'Pending'
+                    status: 'Pending',
+                    date: new Date(newAppointment.date).toLocaleDateString(),
                 };
             
                 const updatedAppointments = [...upcomingAppointments, formattedAppointment];
@@ -376,6 +455,7 @@ const PatientDashboard = () => {
                                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
                                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
                                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="bg-white divide-y divide-gray-200">
@@ -384,7 +464,31 @@ const PatientDashboard = () => {
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{appointment.date}</td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{appointment.time}</td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Dr. {appointment.doctor}</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{appointment.status}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                                appointment.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 
+                                                                appointment.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 
+                                                                'bg-yellow-100 text-yellow-800'
+                                                            }`}>
+                                                                {appointment.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                            {appointment.status === 'Pending' && (
+                                                                <button
+                                                                    onClick={() => handleCancelAppointment(appointment.appointmentId)}
+                                                                    disabled={cancellingAppointment === appointment.appointmentId}
+                                                                    className="text-red-600 hover:text-red-900 flex items-center"
+                                                                >
+                                                                    {cancellingAppointment === appointment.appointmentId ? (
+                                                                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-red-600 mr-1"></div>
+                                                                    ) : (
+                                                                        <TrashIcon className="h-4 w-4 mr-1" />
+                                                                    )}
+                                                                    Cancel
+                                                                </button>
+                                                            )}
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -402,8 +506,35 @@ const PatientDashboard = () => {
                     {/* --- Appointments Tab --- */}
                     {activeTab === 'appointments' && (
                         <div className="space-y-6 px-4 sm:px-0">
-                            <h2 className="text-2xl font-semibold text-gray-800 mb-4">My Appointments</h2>
-                            {upcomingAppointments.length > 0 ? (
+                            <div className="flex justify-between items-center">
+                                <h2 className="text-2xl font-semibold text-gray-800">My Appointments</h2>
+                                <button 
+                                    onClick={fetchAppointments}
+                                    className="px-3 py-1 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200 flex items-center"
+                                    disabled={isLoadingAppointments}
+                                >
+                                    {isLoadingAppointments ? (
+                                        <>
+                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Refreshing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <RefreshIcon className="h-4 w-4 mr-1" />
+                                            Refresh
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                            
+                            {isLoadingAppointments ? (
+                                <div className="flex justify-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                                </div>
+                            ) : upcomingAppointments.length > 0 ? (
                                 <div className="bg-white shadow-md rounded-lg overflow-x-auto border border-gray-200">
                                     <table className="min-w-full divide-y divide-gray-200">
                                         <thead className="bg-gray-50">
@@ -412,6 +543,7 @@ const PatientDashboard = () => {
                                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
                                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
                                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
@@ -420,7 +552,31 @@ const PatientDashboard = () => {
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{appointment.date}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{appointment.time}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Dr. {appointment.doctor}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{appointment.status}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                            appointment.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 
+                                                            appointment.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 
+                                                            'bg-yellow-100 text-yellow-800'
+                                                        }`}>
+                                                            {appointment.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {appointment.status === 'Pending' && (
+                                                            <button
+                                                                onClick={() => handleCancelAppointment(appointment.appointmentId)}
+                                                                disabled={cancellingAppointment === appointment.appointmentId}
+                                                                className="text-red-600 hover:text-red-900 flex items-center"
+                                                            >
+                                                                {cancellingAppointment === appointment.appointmentId ? (
+                                                                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-red-600 mr-1"></div>
+                                                                ) : (
+                                                                    <TrashIcon className="h-4 w-4 mr-1" />
+                                                                )}
+                                                                Cancel
+                                                            </button>
+                                                        )}
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
