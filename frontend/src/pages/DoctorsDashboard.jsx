@@ -203,6 +203,7 @@ const AppointmentsTab = ({ doctorId, onStatusChange }) => {
         } finally {
             setUpdatingAppointments((prev) => ({ ...prev, [appointmentId]: false }));
         }
+        
     } else {
         // Handle other status updates (e.g., Confirmed)
         if (!window.confirm('Are you sure you want to confirm this appointment?')) return;
@@ -343,6 +344,22 @@ const PatientsTab = ({ doctorId, refreshTrigger }) => {
   const [patients, setPatients] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+        const appointmentsResponse = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}/status/Confirmed`);
+        if (!appointmentsResponse.ok) throw new Error('Failed to fetch appointments');
+        
+        const appointmentsData = await appointmentsResponse.json();
+        console.log('Confirmed Appointments:', appointmentsData); // Debug log
+        setAppointments(appointmentsData);
+    } catch (error) {
+        console.error('Error fetching appointments:', error);
+    } finally {
+        setIsLoading(false);
+    }
+};
 
   const fetchPatients = async () => {
     if (!doctorId) {
