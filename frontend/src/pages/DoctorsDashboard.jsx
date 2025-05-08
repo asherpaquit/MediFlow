@@ -155,7 +155,7 @@ const AppointmentsTab = ({ doctorId, onStatusChange }) => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/appointments/doctor/${doctorId}`);
+      const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch appointments');
       }
@@ -177,7 +177,7 @@ const AppointmentsTab = ({ doctorId, onStatusChange }) => {
     if (window.confirm(`Are you sure you want to ${action} this appointment?`)) {
       setUpdatingAppointments(prev => ({...prev, [appointmentId]: true}));
       try {
-        const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/status`, {
+        const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/${appointmentId}/status`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: newStatus })
@@ -322,8 +322,7 @@ const PatientsTab = ({ doctorId, refreshTrigger }) => {
     setError(null);
     
     try {
-      const response = await fetch(
-        `http://localhost:8080/api/appointments/doctor/${doctorId}/status/Confirmed`
+      const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}/status/Confirmed`
       );
       
       if (!response.ok) throw new Error(`Failed to fetch patients: ${response.status}`);
@@ -455,7 +454,7 @@ const MedicalRecordsTab = ({ doctorId }) => {
     const fetchRecords = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`http://localhost:8080/api/doctors/${doctorId}/medical-records`);
+        const response = await fetch(`https://mediflow-s7af.onrender.com/api/doctors/${doctorId}/medical-records`);
         if (!response.ok) {
           throw new Error('Failed to fetch medical records');
         }
@@ -566,13 +565,13 @@ const PrescriptionsTab = ({ doctorId }) => {
       setIsLoading(true);
       try {
         // Fetch prescriptions
-        const prescriptionsResponse = await fetch(`http://localhost:8080/api/prescriptions/doctor/${doctorId}`);
+        const prescriptionsResponse = await fetch(`https://mediflow-s7af.onrender.com/api/prescriptions/doctor/${doctorId}`);
         if (!prescriptionsResponse.ok) throw new Error('Failed to fetch prescriptions');
         const prescriptionsData = await prescriptionsResponse.json();
         setPrescriptions(prescriptionsData);
 
         // Fetch confirmed appointments
-        const appointmentsResponse = await fetch(`http://localhost:8080/api/appointments/doctor/${doctorId}/status/Confirmed`);
+        const appointmentsResponse = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}/status/Confirmed`);
         if (!appointmentsResponse.ok) throw new Error('Failed to fetch appointments');
         const appointmentsData = await appointmentsResponse.json();
         setAppointments(appointmentsData);
@@ -608,7 +607,7 @@ const PrescriptionsTab = ({ doctorId }) => {
   
       console.log('Sending payload:', payload); // Debug log
   
-      const response = await fetch('http://localhost:8080/api/prescriptions', {
+      const response = await fetch('https://mediflow-s7af.onrender.com/api/prescriptions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -874,7 +873,7 @@ const ProfileSettingsTab = ({ doctorData }) => {
     setIsSaving(true);
     
     try {
-      const response = await fetch(`http://localhost:8080/api/user-doctors/${doctorData.doctorId}`, {
+      const response = await fetch(`https://mediflow-s7af.onrender.com/api/user-doctors/${doctorData.doctorId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
