@@ -671,12 +671,11 @@ const PatientDashboard = () => {
                                         <tbody className="bg-white divide-y divide-gray-200">
                                             {medicalRecords.map((record) => (
                                                 <tr key={record.id}>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.id}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.doctor}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.date}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.dosage}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.instructions}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.medication}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.doctor}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
