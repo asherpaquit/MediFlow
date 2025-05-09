@@ -26,7 +26,7 @@ const Login = () => {
     const API_URL = process.env.REACT_APP_API_URL || 'https://mediflow-s7af.onrender.com';
 
     try {
-      const response = await fetch(`https://mediflow-s7af.onrender.com/api/user-patients/login`, {
+      const response = await fetch(`${API_URL}/api/user-patients/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -59,6 +59,7 @@ const Login = () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md w-80">
+        {/* Logo */}
         <img src="/logo.png" alt="Logo" className="w-32 mx-auto mb-6" />
 
         {error && (
