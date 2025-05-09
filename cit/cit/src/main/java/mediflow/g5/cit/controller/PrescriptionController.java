@@ -48,15 +48,15 @@ public class PrescriptionController {
             prescription.setDosage(request.getDosage());
             prescription.setInstructions(request.getInstructions());
             prescription.setDateIssued(request.getDateIssued());
-            prescription.setDoctor(doctor); // Set the fetched doctor
-            prescription.setPatient(patient); // Set the fetched patient
-            prescription.setAppointment(appointment); // Set the fetched appointment
+            prescription.setDoctor(doctor);
+            prescription.setPatient(patient);
+            prescription.setAppointment(appointment);
 
-            // Save the prescription
-            Prescription saved = prescriptionService.savePrescription(prescription);
+            // Use createPrescription instead of savePrescription to ensure medical record is created
+            Prescription saved = prescriptionService.createPrescription(prescription);
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
-            e.printStackTrace(); // Log the exception
+            e.printStackTrace();
             return ResponseEntity.badRequest().body(null);
         }
     }
