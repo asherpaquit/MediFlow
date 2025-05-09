@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import logo from '../assets/logo.png'; // Adjust the path to your logo image
+import logo from '../assets/images/logo.png'; // Adjust the path to your logo image
 
 // This component handles the login functionality for patients.
 const Login = () => {
