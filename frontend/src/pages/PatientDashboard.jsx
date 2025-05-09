@@ -660,22 +660,21 @@ const PatientDashboard = () => {
                                     <table className="min-w-full divide-y divide-gray-200">
                                         <thead className="bg-gray-50">
                                             <tr>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medication</th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dosage</th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Instructions</th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medication</th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
-                                            {medicalRecords.map((record) => (
-                                                <tr key={record.id}>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.doctor}</td>
+                                            {medicalRecords.map((record, index) => (
+                                                <tr key={index}>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.doctor}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.date}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.medication}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.dosage}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.instructions}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.medication}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
