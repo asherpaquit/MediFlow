@@ -115,43 +115,38 @@ const PatientDashboard = () => {
             }
             const data = await response.json();
 
-            // Format appointments with doctor names
+            console.log('Appointments Response:', data); // Debugging log
+
             const formattedAppointments = await Promise.all(
                 data.map(async (appointment) => {
-                    try {
-                        const doctorResponse = await fetch(`https://mediflow-s7af.onrender.com/api/user-doctors/${appointment.doctorId}`);
-                        if (doctorResponse.ok) {
-                            const doctor = await doctorResponse.json();
-                            return {
-                                ...appointment,
-                                doctor: `Dr. ${doctor.firstname} ${doctor.lastname}`,
-                                date: new Date(appointment.date).toLocaleDateString(),
-                            };
+                    let doctorName = 'Unknown Doctor';
+                    if (appointment.doctorId) {
+                        try {
+                            const doctorResponse = await fetch(`https://mediflow-s7af.onrender.com/api/user-doctors/${appointment.doctorId}`);
+                            if (doctorResponse.ok) {
+                                const doctor = await doctorResponse.json();
+                                doctorName = `Dr. ${doctor.firstname} ${doctor.lastname}`;
+                            } else {
+                                console.error(`Failed to fetch doctor details for doctorId: ${appointment.doctorId}`);
+                            }
+                        } catch (err) {
+                            console.error('Error fetching doctor details:', err);
                         }
-                        return {
-                            ...appointment,
-                            doctor: 'Unknown Doctor',
-                            date: new Date(appointment.date).toLocaleDateString(),
-                        };
-                    } catch (err) {
-                        console.error("Error fetching doctor details:", err);
-                        return {
-                            ...appointment,
-                            doctor: 'Unknown Doctor',
-                            date: new Date(appointment.date).toLocaleDateString(),
-                        };
+                    } else {
+                        console.warn('Missing doctorId for appointment:', appointment);
                     }
+
+                    return {
+                        ...appointment,
+                        doctor: doctorName,
+                        date: new Date(appointment.date).toLocaleDateString(),
+                    };
                 })
             );
 
             setUpcomingAppointments(formattedAppointments);
-            localStorage.setItem('appointments', JSON.stringify(formattedAppointments));
         } catch (error) {
             console.error('Error fetching appointments:', error);
-            const savedAppointments = JSON.parse(localStorage.getItem('appointments'));
-            if (savedAppointments && Array.isArray(savedAppointments)) {
-                setUpcomingAppointments(savedAppointments);
-            }
         } finally {
             setIsLoadingAppointments(false);
         }
@@ -173,6 +168,8 @@ const PatientDashboard = () => {
             }
             const data = await response.json();
 
+            console.log('Medical Records Response:', data); // Debugging log
+
             const formattedRecords = await Promise.all(
                 data.map(async (record) => {
                     let doctorName = 'Unknown Doctor';
@@ -182,10 +179,14 @@ const PatientDashboard = () => {
                             if (doctorResponse.ok) {
                                 const doctor = await doctorResponse.json();
                                 doctorName = `Dr. ${doctor.firstname} ${doctor.lastname}`;
+                            } else {
+                                console.error(`Failed to fetch doctor details for doctorId: ${record.doctorId}`);
                             }
                         } catch (err) {
                             console.error('Error fetching doctor details:', err);
                         }
+                    } else {
+                        console.warn('Missing doctorId for record:', record);
                     }
 
                     return {
