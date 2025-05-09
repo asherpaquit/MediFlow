@@ -120,14 +120,15 @@ const PatientDashboard = () => {
             const formattedAppointments = await Promise.all(
                 data.map(async (appointment) => {
                     let doctorName = 'Unknown Doctor';
-                    if (appointment.doctorId) {
+                    const doctorId = appointment.doctor?.doctorId; // Access doctorId from the nested doctor object
+                    if (doctorId) {
                         try {
-                            const doctorResponse = await fetch(`https://mediflow-s7af.onrender.com/api/user-doctors/${appointment.doctorId}`);
+                            const doctorResponse = await fetch(`https://mediflow-s7af.onrender.com/api/user-doctors/${doctorId}`);
                             if (doctorResponse.ok) {
                                 const doctor = await doctorResponse.json();
                                 doctorName = `Dr. ${doctor.firstName} ${doctor.lastName}`;
                             } else {
-                                console.error(`Failed to fetch doctor details for doctorId: ${appointment.doctorId}`);
+                                console.error(`Failed to fetch doctor details for doctorId: ${doctorId}`);
                             }
                         } catch (err) {
                             console.error('Error fetching doctor details:', err);
