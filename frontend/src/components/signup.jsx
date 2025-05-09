@@ -7,7 +7,7 @@ const Signup = () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md w-80 text-center">
-        <img src= {logo} alt="Logo" className="w-32 mx-auto mb-6" />
+        <img src={logo} alt="Logo" className="w-32 mx-auto mb-6" />
         <p className="text-lg mb-6 font-medium">Signup As Doctor or Patient</p>
         
         <button 
