@@ -1,7 +1,7 @@
 import React from 'react';
 import Navbar from '../components/navbar';
 import Login from '../components/login';
-import logo from '..'
+
 
 const LoginPage = () => {
   return (
