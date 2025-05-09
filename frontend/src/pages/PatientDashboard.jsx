@@ -81,7 +81,8 @@ const PatientDashboard = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [upcomingAppointments, setUpcomingAppointments] = useState([]);
     const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
-    const [medicalRecords] = useState([]);
+    const [medicalRecords, setMedicalRecords] = useState([]);
+    const [isLoadingRecords, setIsLoadingRecords] = useState(false);
     const [cancellingAppointment, setCancellingAppointment] = useState(null);
 
     // --- Appointment Booking State ---
@@ -113,7 +114,7 @@ const PatientDashboard = () => {
                 throw new Error('Failed to fetch appointments');
             }
             const data = await response.json();
-            
+
             // Format appointments with doctor names
             const formattedAppointments = await Promise.all(
                 data.map(async (appointment) => {
@@ -123,7 +124,7 @@ const PatientDashboard = () => {
                             const doctor = await doctorResponse.json();
                             return {
                                 ...appointment,
-                                doctor: `Dr. ${doctor.firstName} ${doctor.lastName}`,
+                                doctor: `Dr. ${doctor.firstname} ${doctor.lastname}`,
                                 date: new Date(appointment.date).toLocaleDateString(),
                             };
                         }
@@ -142,12 +143,11 @@ const PatientDashboard = () => {
                     }
                 })
             );
-            
+
             setUpcomingAppointments(formattedAppointments);
             localStorage.setItem('appointments', JSON.stringify(formattedAppointments));
         } catch (error) {
             console.error('Error fetching appointments:', error);
-            // Fallback to local storage if API fails
             const savedAppointments = JSON.parse(localStorage.getItem('appointments'));
             if (savedAppointments && Array.isArray(savedAppointments)) {
                 setUpcomingAppointments(savedAppointments);
@@ -159,6 +159,55 @@ const PatientDashboard = () => {
 
     useEffect(() => {
         fetchAppointments();
+    }, [patientData?.patientId]);
+
+    // --- Fetch Medical Records from Backend ---
+    const fetchMedicalRecords = async () => {
+        if (!patientData || !patientData.patientId) return;
+
+        setIsLoadingRecords(true);
+        try {
+            const response = await fetch(`https://mediflow-s7af.onrender.com/api/medical-records/patient/${patientData.patientId}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch medical records');
+            }
+            const data = await response.json();
+
+            const formattedRecords = await Promise.all(
+                data.map(async (record) => {
+                    let doctorName = 'Unknown Doctor';
+                    if (record.doctorId) {
+                        try {
+                            const doctorResponse = await fetch(`https://mediflow-s7af.onrender.com/api/user-doctors/${record.doctorId}`);
+                            if (doctorResponse.ok) {
+                                const doctor = await doctorResponse.json();
+                                doctorName = `Dr. ${doctor.firstname} ${doctor.lastname}`;
+                            }
+                        } catch (err) {
+                            console.error('Error fetching doctor details:', err);
+                        }
+                    }
+
+                    return {
+                        doctor: doctorName,
+                        date: new Date(record.date).toLocaleDateString(),
+                        medication: record.prescription?.medication || 'N/A',
+                        dosage: record.prescription?.dosage || 'N/A',
+                        instructions: record.prescription?.instructions || 'N/A',
+                    };
+                })
+            );
+
+            setMedicalRecords(formattedRecords);
+        } catch (error) {
+            console.error('Error fetching medical records:', error);
+        } finally {
+            setIsLoadingRecords(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchMedicalRecords();
     }, [patientData?.patientId]);
 
     // --- Effect to Fetch Doctors ---
@@ -185,25 +234,19 @@ const PatientDashboard = () => {
         }
     }, []);
 
- 
+    // --- Cancel Appointment Handler ---
     const handleCancelAppointment = async (appointmentId) => {
         if (!window.confirm('Are you sure you want to cancel this appointment?')) return;
 
         setCancellingAppointment(appointmentId);
         try {
-            console.log('Cancelling appointment with ID:', appointmentId);
-
             const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/${appointmentId}/status`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'Cancelled' }),
+                body: JSON.stringify({ status: 'Cancelled' })
             });
 
-            if (!response.ok) {
-                const errorDetails = await response.text();
-                console.error('Error details:', errorDetails);
-                throw new Error('Failed to cancel appointment');
-            }
+            if (!response.ok) throw new Error('Failed to cancel appointment');
 
             await fetchAppointments();
             alert('Appointment cancelled successfully');
@@ -271,76 +314,76 @@ const PatientDashboard = () => {
     const handleBookingSubmit = async (e) => {
         e.preventDefault();
         setBookingStatus({ loading: true, error: null, success: null });
-      
+
         if (!selectedDoctorId || !appointmentDate || !appointmentTime) {
-          setBookingStatus({ loading: false, error: 'Please select a doctor, date, and time.', success: null });
-          return;
+            setBookingStatus({ loading: false, error: 'Please select a doctor, date, and time.', success: null });
+            return;
         }
-      
+
         if (!patientData || !patientData.patientId) {
-          setBookingStatus({ loading: false, error: 'Patient information is missing. Please try logging in again.', success: null });
-          return;
+            setBookingStatus({ loading: false, error: 'Patient information is missing. Please try logging in again.', success: null });
+            return;
         }
-      
+
         const formattedDate = new Date(appointmentDate).toISOString().split('T')[0];
         const formattedTime = appointmentTime;
-      
+
         const appointmentPayload = {
-          patientId: Number(patientData.patientId), // Convert to number
-          doctorId: Number(selectedDoctorId), // Convert to number
-          date: formattedDate,
-          time: formattedTime,
-          notes: appointmentReason || null,
+            patientId: Number(patientData.patientId),
+            doctorId: Number(selectedDoctorId),
+            date: formattedDate,
+            time: formattedTime,
+            notes: appointmentReason || null,
         };
-      
+
         try {
-          const response = await fetch('https://mediflow-s7af.onrender.com/api/appointments', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(appointmentPayload),
-          });
-      
-          if (response.ok) {
-            const newAppointment = await response.json();
-            const doctor = doctors.find((d) => d.doctorId === newAppointment.doctorId);
-            const formattedAppointment = {
-              ...newAppointment,
-              doctor: doctor ? `${doctor.firstName} ${doctor.lastName}` : 'Unknown Doctor',
-              status: 'Pending',
-              date: new Date(newAppointment.date).toLocaleDateString(),
-            };
-      
-            const updatedAppointments = [...upcomingAppointments, formattedAppointment];
-      
-            setBookingStatus({ loading: false, error: null, success: 'Appointment booked successfully!' });
-            setUpcomingAppointments(updatedAppointments);
-            localStorage.setItem('appointments', JSON.stringify(updatedAppointments));
-      
-            setSelectedDoctorId('');
-            setAppointmentDate('');
-            setAppointmentTime('');
-            setAppointmentReason('');
-            setTimeout(() => setBookingStatus((prev) => ({ ...prev, success: null })), 5000);
-          } else {
-            const contentType = response.headers.get('content-type');
-            let errorMessage = 'Failed to book appointment.';
-      
-            if (contentType && contentType.includes('application/json')) {
-              const errorData = await response.json();
-              errorMessage = errorData?.message || errorMessage;
+            const response = await fetch('https://mediflow-s7af.onrender.com/api/appointments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(appointmentPayload),
+            });
+
+            if (response.ok) {
+                const newAppointment = await response.json();
+                const doctor = doctors.find((d) => d.doctorId === newAppointment.doctorId);
+                const formattedAppointment = {
+                    ...newAppointment,
+                    doctor: doctor ? `${doctor.firstName} ${doctor.lastName}` : 'Unknown Doctor',
+                    status: 'Pending',
+                    date: new Date(newAppointment.date).toLocaleDateString(),
+                };
+
+                const updatedAppointments = [...upcomingAppointments, formattedAppointment];
+
+                setBookingStatus({ loading: false, error: null, success: 'Appointment booked successfully!' });
+                setUpcomingAppointments(updatedAppointments);
+                localStorage.setItem('appointments', JSON.stringify(updatedAppointments));
+
+                setSelectedDoctorId('');
+                setAppointmentDate('');
+                setAppointmentTime('');
+                setAppointmentReason('');
+                setTimeout(() => setBookingStatus((prev) => ({ ...prev, success: null })), 5000);
             } else {
-              errorMessage = await response.text(); 
+                const contentType = response.headers.get('content-type');
+                let errorMessage = 'Failed to book appointment.';
+
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await response.json();
+                    errorMessage = errorData?.message || errorMessage;
+                } else {
+                    errorMessage = await response.text(); 
+                }
+
+                throw new Error(errorMessage);
             }
-      
-            throw new Error(errorMessage);
-          }
         } catch (err) {
-          console.error('Error booking appointment:', err);
-          setBookingStatus({ loading: false, error: err.message || 'An error occurred during booking.', success: null });
-          setTimeout(() => setBookingStatus((prev) => ({ ...prev, error: null })), 5000);
+            console.error('Error booking appointment:', err);
+            setBookingStatus({ loading: false, error: err.message || 'An error occurred during booking.', success: null });
+            setTimeout(() => setBookingStatus((prev) => ({ ...prev, error: null })), 5000);
         }
     };
-
+    
     const getTodayDate = () => {
         const today = new Date();
         const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -608,24 +651,32 @@ const PatientDashboard = () => {
                     {activeTab === 'records' && (
                         <div className="space-y-6 px-4 sm:px-0">
                             <h2 className="text-2xl font-semibold text-gray-800 mb-4">Medical Records</h2>
-                            {medicalRecords.length > 0 ? (
+                            {isLoadingRecords ? (
+                                <div className="flex justify-center items-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                                </div>
+                            ) : medicalRecords.length > 0 ? (
                                 <div className="bg-white shadow-md rounded-lg overflow-x-auto border border-gray-200">
                                     <table className="min-w-full divide-y divide-gray-200">
                                         <thead className="bg-gray-50">
                                             <tr>
-                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
-                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diagnosis</th>
-                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prescription</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dosage</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Instructions</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medication</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
                                             {medicalRecords.map((record) => (
                                                 <tr key={record.id}>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.date}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.id}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.date}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.dosage}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.instructions}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.medication}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.doctor}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.diagnosis}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.prescription}</td>
                                                 </tr>
                                             ))}
                                         </tbody>

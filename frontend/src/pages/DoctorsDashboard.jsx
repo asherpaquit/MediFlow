@@ -111,9 +111,7 @@ const DoctorDashboard = () => {
           {activeTab === 'appointments' && (
             <AppointmentsTab 
               doctorId={doctorData.doctorId} 
-              onStatusChange={() => {
-                triggerRefresh();
-              }} 
+              onStatusChange={triggerRefresh} 
             />
           )}
           {activeTab === 'patients' && (
@@ -123,10 +121,16 @@ const DoctorDashboard = () => {
             />
           )}
           {activeTab === 'medicalRecords' && (
-            <MedicalRecordsTab doctorId={doctorData.doctorId} />
+            <MedicalRecordsTab 
+              doctorId={doctorData.doctorId} 
+              refreshTrigger={refreshTrigger} 
+            />
           )}
           {activeTab === 'prescriptions' && (
-            <PrescriptionsTab doctorId={doctorData.doctorId} />
+            <PrescriptionsTab 
+              doctorId={doctorData.doctorId} 
+              onPrescriptionCreated={triggerRefresh} 
+            />
           )}
           {activeTab === 'profile' && (
             <ProfileSettingsTab doctorData={doctorData} />
@@ -146,81 +150,48 @@ const AppointmentsTab = ({ doctorId, onStatusChange }) => {
 
   const fetchAppointments = async () => {
     if (!doctorId) {
-      setNotification({
-        type: 'error',
-        message: 'Doctor ID is missing'
-      });
-      return;
+        setNotification({
+            type: 'error',
+            message: 'Doctor ID is missing'
+        });
+        return;
     }
 
     setIsLoading(true);
     try {
-      const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch appointments');
-      }
-      const data = await response.json();
-      setAppointments(data);
+        const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch appointments');
+        }
+        const data = await response.json();
+        setAppointments(data);
     } catch (error) {
-      console.error('Error fetching appointments:', error);
-      setNotification({
-        type: 'error',
-        message: 'Failed to fetch appointments'
-      });
+        console.error('Error fetching appointments:', error);
+        setNotification({
+            type: 'error',
+            message: 'Failed to fetch appointments'
+        });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  };
+};
 
   const handleStatusUpdate = async (appointmentId, newStatus) => {
-    if (newStatus === 'Cancelled') {
-        if (!window.confirm('Are you sure you want to cancel and delete this appointment?')) return;
-
-        setUpdatingAppointments((prev) => ({ ...prev, [appointmentId]: true }));
-        try {
-            // Send DELETE request to remove the appointment
-            const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/${appointmentId}`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-            });
-
-            if (!response.ok) throw new Error('Failed to delete appointment');
-
-            setNotification({
-                type: 'success',
-                message: 'Appointment deleted successfully',
-            });
-
-            // Remove the appointment from the state
-            setAppointments((prev) => prev.filter((appt) => appt.appointmentId !== appointmentId));
-            onStatusChange();
-        } catch (error) {
-            console.error('Error deleting appointment:', error);
-            setNotification({
-                type: 'error',
-                message: 'Failed to delete appointment',
-            });
-        } finally {
-            setUpdatingAppointments((prev) => ({ ...prev, [appointmentId]: false }));
-        }
-        
-    } else {
-        // Handle other status updates (e.g., Confirmed)
-        if (!window.confirm('Are you sure you want to confirm this appointment?')) return;
-
-        setUpdatingAppointments((prev) => ({ ...prev, [appointmentId]: true }));
+    const action = newStatus === 'Confirmed' ? 'confirm' : 'cancel';
+    if (window.confirm(`Are you sure you want to ${action} this appointment?`)) {
+        setUpdatingAppointments(prev => ({ ...prev, [appointmentId]: true }));
         try {
             const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/${appointmentId}/status`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus }),
+                body: JSON.stringify({ status: newStatus })
             });
 
             if (!response.ok) throw new Error('Failed to update appointment status');
 
             setNotification({
                 type: 'success',
-                message: 'Appointment confirmed successfully',
+                message: `Appointment ${action}ed successfully`
             });
 
             await fetchAppointments();
@@ -229,10 +200,10 @@ const AppointmentsTab = ({ doctorId, onStatusChange }) => {
             console.error('Error updating appointment status:', error);
             setNotification({
                 type: 'error',
-                message: 'Failed to update appointment status',
+                message: `Failed to ${action} appointment`
             });
         } finally {
-            setUpdatingAppointments((prev) => ({ ...prev, [appointmentId]: false }));
+            setUpdatingAppointments(prev => ({ ...prev, [appointmentId]: false }));
         }
     }
 };
@@ -345,22 +316,6 @@ const PatientsTab = ({ doctorId, refreshTrigger }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-        const appointmentsResponse = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}/status/Confirmed`);
-        if (!appointmentsResponse.ok) throw new Error('Failed to fetch appointments');
-        
-        const appointmentsData = await appointmentsResponse.json();
-        console.log('Confirmed Appointments:', appointmentsData); // Debug log
-        setAppointments(appointmentsData);
-    } catch (error) {
-        console.error('Error fetching appointments:', error);
-    } finally {
-        setIsLoading(false);
-    }
-};
-
   const fetchPatients = async () => {
     if (!doctorId) {
       setError("Doctor ID is missing");
@@ -371,7 +326,8 @@ const PatientsTab = ({ doctorId, refreshTrigger }) => {
     setError(null);
     
     try {
-      const response = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}/status/Confirmed`
+      const response = await fetch(
+        `http://localhost:8080/api/appointments/doctor/${doctorId}/status/Confirmed`
       );
       
       if (!response.ok) throw new Error(`Failed to fetch patients: ${response.status}`);
@@ -494,7 +450,7 @@ const PatientsTab = ({ doctorId, refreshTrigger }) => {
 };
 
 // Medical Records Tab Component
-const MedicalRecordsTab = ({ doctorId }) => {
+const MedicalRecordsTab = ({ doctorId, refreshTrigger }) => {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -503,12 +459,28 @@ const MedicalRecordsTab = ({ doctorId }) => {
     const fetchRecords = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`https://mediflow-s7af.onrender.com/api/doctors/${doctorId}/medical-records`);
+        const response = await fetch(`http://localhost:8080/api/medical-records/doctor/${doctorId}`);
         if (!response.ok) {
           throw new Error('Failed to fetch medical records');
         }
         const data = await response.json();
-        setRecords(data);
+
+        // Transform data to include prescription details
+        const transformedRecords = data.map((record) => ({
+          ...record,
+          patientName: record.patient
+            ? `${record.patient.firstname} ${record.patient.lastname}`
+            : 'Unknown Patient',
+          prescriptionDetails: record.prescription
+            ? {
+                medication: record.prescription.medication,
+                dosage: record.prescription.dosage,
+                instructions: record.prescription.instructions,
+              }
+            : null,
+        }));
+
+        setRecords(transformedRecords);
       } catch (error) {
         console.error('Error fetching medical records:', error);
       } finally {
@@ -517,11 +489,14 @@ const MedicalRecordsTab = ({ doctorId }) => {
     };
 
     fetchRecords();
-  }, [doctorId]);
+  }, [doctorId, refreshTrigger]);
 
-  const filteredRecords = records.filter(record =>
-    record.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.recordType.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredRecords = records.filter(
+    (record) =>
+      record.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.recordType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (record.prescriptionDetails &&
+        record.prescriptionDetails.medication.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -563,22 +538,50 @@ const MedicalRecordsTab = ({ doctorId }) => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Patient Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Record Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Details
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredRecords.map((record) => (
                 <tr key={record.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{record.patientName}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {record.patientName}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{record.recordType}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(record.date).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{record.description}</td>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    {record.recordType === 'PRESCRIPTION' && record.prescriptionDetails ? (
+                      <div>
+                        <p>
+                          <strong>Medication:</strong> {record.prescriptionDetails.medication}
+                        </p>
+                        <p>
+                          <strong>Dosage:</strong> {record.prescriptionDetails.dosage}
+                        </p>
+                        <p>
+                          <strong>Instructions:</strong> {record.prescriptionDetails.instructions}
+                        </p>
+                      </div>
+                    ) : (
+                      record.description
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <button className="text-blue-600 hover:text-blue-900 flex items-center">
                       <FiEye className="mr-1" /> View
@@ -595,8 +598,7 @@ const MedicalRecordsTab = ({ doctorId }) => {
 };
 
 // Prescriptions Tab Component
-// Prescriptions Tab Component
-const PrescriptionsTab = ({ doctorId }) => {
+const PrescriptionsTab = ({ doctorId, onPrescriptionCreated }) => {
   const [prescriptions, setPrescriptions] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -611,90 +613,87 @@ const PrescriptionsTab = ({ doctorId }) => {
 
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch confirmed appointments
-        const appointmentsResponse = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}/status/Confirmed`);
-        if (!appointmentsResponse.ok) throw new Error('Failed to fetch appointments');
-        const appointmentsData = await appointmentsResponse.json();
-        setAppointments(appointmentsData);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setIsLoading(false);
-      }
+        setIsLoading(true);
+        try {
+            // Fetch confirmed appointments
+            const appointmentsResponse = await fetch(`https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}/status/Confirmed`);
+            if (!appointmentsResponse.ok) throw new Error('Failed to fetch appointments');
+            const appointmentsData = await appointmentsResponse.json();
+            setAppointments(appointmentsData);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     fetchData();
-  }, [doctorId]);
+}, [doctorId]);
 
   const handleCreatePrescription = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-  
+
     try {
-      if (!selectedAppointment) {
-        throw new Error('No appointment selected');
-      }
-  
-      // Prepare the payload exactly as the backend expects
-      const payload = {
-        medication: formData.medication,
-        dosage: formData.dosage,
-        instructions: formData.instructions,
-        dateIssued: formData.dateIssued, // Should be in YYYY-MM-DD format
-        doctorId: Number(doctorId), // Convert to number
-        patientId: Number(selectedAppointment.patient.patientId), // Convert to number
-        appointmentId: selectedAppointment.appointmentId // Keep as string
-      };
-  
-      console.log('Sending payload:', payload); // Debug log
-  
-      const response = await fetch('https://mediflow-s7af.onrender.com/api/prescriptions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add if using authentication:
-          // 'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(payload),
-      });
-  
-      if (!response.ok) {
-        // Try to get error details from response
-        const errorResponse = await response.json().catch(() => ({}));
-        console.error('Server error response:', errorResponse);
-        throw new Error(errorResponse.message || 'Failed to create prescription');
-      }
-  
-      const newPrescription = await response.json();
-      
-      // Enhance the response with patient details for display
-      const enhancedPrescription = {
-        ...newPrescription,
-        patient: {
-          firstname: selectedAppointment.patient.firstname,
-          lastname: selectedAppointment.patient.lastname
+        if (!selectedAppointment) {
+            throw new Error('No appointment selected');
         }
-      };
-      
-      setPrescriptions(prev => [...prev, enhancedPrescription]);
-      setShowCreateForm(false);
-      setFormData({
-        medication: '',
-        dosage: '',
-        instructions: '',
-        dateIssued: new Date().toISOString().split('T')[0],
-      });
-      
+
+        const payload = {
+            medication: formData.medication,
+            dosage: formData.dosage,
+            instructions: formData.instructions,
+            dateIssued: formData.dateIssued,
+            doctorId: Number(doctorId),
+            patientId: Number(selectedAppointment.patient.patientId),
+            appointmentId: selectedAppointment.appointmentId
+        };
+
+        console.log('Sending payload:', payload);
+
+        const response = await fetch('https://mediflow-s7af.onrender.com/api/prescriptions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const errorResponse = await response.json().catch(() => ({}));
+            console.error('Server error response:', errorResponse);
+            throw new Error(errorResponse.message || 'Failed to create prescription');
+        }
+
+        const newPrescription = await response.json();
+        console.log('New Prescription Created:', newPrescription);
+
+        onPrescriptionCreated();
+
+        const enhancedPrescription = {
+            ...newPrescription,
+            patient: {
+                firstname: selectedAppointment.patient.firstname,
+                lastname: selectedAppointment.patient.lastname
+            }
+        };
+
+        setPrescriptions((prev) => [...prev, enhancedPrescription]);
+        setShowCreateForm(false);
+        setFormData({
+            medication: '',
+            dosage: '',
+            instructions: '',
+            dateIssued: new Date().toISOString().split('T')[0],
+        });
     } catch (error) {
-      console.error('Error:', error);
-      alert(`Error creating prescription: ${error.message}`);
+        console.error('Error:', error);
+        alert(`Error creating prescription: ${error.message}`);
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  };
-  
+};
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -916,7 +915,7 @@ const ProfileSettingsTab = ({ doctorData }) => {
     setIsSaving(true);
     
     try {
-      const response = await fetch(`https://mediflow-s7af.onrender.com/api/user-doctors/${doctorData.doctorId}`, {
+      const response = await fetch(`http://localhost:8080/api/user-doctors/${doctorData.doctorId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
