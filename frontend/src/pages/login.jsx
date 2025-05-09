@@ -61,7 +61,7 @@ const Login = () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md w-80">
-        <img src='logo.png' alt="Logo" className="w-32 mx-auto mb-6" />
+        <img src={logo} alt="Mediflo logo featuring a stylized medical cross" className="w-32 mx-auto mb-6" />
 
         {error && (
           <div className="mb-4 p-2 text-sm text-red-600 bg-red-100 rounded">
