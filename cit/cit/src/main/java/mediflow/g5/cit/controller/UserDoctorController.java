@@ -93,4 +93,22 @@ public class UserDoctorController {
         public String getPassword() { return password; }
         public void setPassword(String password) { this.password = password; }
     }
+
+    @GetMapping("/{id}")
+public ResponseEntity<?> getDoctorById(@PathVariable Long id) {
+    Optional<UserDoctor> doctor = userDoctorService.getDoctorById(id);
+    if (doctor.isPresent()) {
+        UserDoctor d = doctor.get();
+        DoctorResponse response = new DoctorResponse(
+            d.getDoctorId(),
+            d.getFirstName(),
+            d.getLastName(),
+            d.getSpecialization(),
+            true // or your logic
+        );
+        return ResponseEntity.ok(response);
+    } else {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Doctor not found");
+    }
+}
 }
