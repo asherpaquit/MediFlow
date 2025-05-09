@@ -110,5 +110,6 @@ public ResponseEntity<?> getDoctorById(@PathVariable Long id) {
     } else {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Doctor not found");
     }
-}
+ }
+
 }

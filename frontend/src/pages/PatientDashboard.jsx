@@ -125,7 +125,7 @@ const PatientDashboard = () => {
                             const doctorResponse = await fetch(`https://mediflow-s7af.onrender.com/api/user-doctors/${appointment.doctorId}`);
                             if (doctorResponse.ok) {
                                 const doctor = await doctorResponse.json();
-                                doctorName = `Dr. ${doctor.firstname} ${doctor.lastname}`;
+                                doctorName = `Dr. ${doctor.firstName} ${doctor.lastName}`;
                             } else {
                                 console.error(`Failed to fetch doctor details for doctorId: ${appointment.doctorId}`);
                             }
