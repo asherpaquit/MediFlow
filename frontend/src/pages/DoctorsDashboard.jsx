@@ -915,7 +915,7 @@ const ProfileSettingsTab = ({ doctorData }) => {
     setIsSaving(true);
     
     try {
-      const response = await fetch(`http://localhost:8080/api/user-doctors/${doctorData.doctorId}`, {
+      const response = await fetch(`https://mediflow-s7af.onrender.com/api/user-doctors/${doctorData.doctorId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
