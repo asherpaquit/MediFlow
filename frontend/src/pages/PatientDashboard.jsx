@@ -6,7 +6,6 @@ import {
     CameraIcon,
     UserIcon,
     XIcon,
-    ArrowLeftIcon,
     CalendarIcon,
     ClockIcon,
     DocumentTextIcon,
@@ -409,7 +408,6 @@ const PatientDashboard = () => {
                         {/* Left Side: Logo and Desktop Nav */}
                         <div className="flex items-center">
                             <div className="flex-shrink-0 flex items-center text-xl font-bold text-blue-600">
-                                <ArrowLeftIcon className="h-5 w-5 mr-2 cursor-pointer hover:text-blue-800" onClick={() => navigate(-1)} />
                                 MediFlow
                             </div>
                             <div className="hidden sm:ml-6 sm:flex sm:space-x-4">
@@ -459,38 +457,6 @@ const PatientDashboard = () => {
                         </div>
                     </div>
                 </div>
-
-                {/* Mobile menu */}
-                {isMobileMenuOpen && (
-                    <div className="sm:hidden" id="mobile-menu">
-                        <div className="pt-2 pb-3 space-y-1">
-                            {tabs.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => {
-                                        setActiveTab(tab.id);
-                                        setIsMobileMenuOpen(false);
-                                    }}
-                                    className={`${activeTab === tab.id
-                                        ? 'bg-blue-50 border-blue-500 text-blue-700'
-                                        : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
-                                        } flex items-center pl-3 pr-4 py-2 border-l-4 text-base font-medium w-full text-left`}
-                                    aria-current={activeTab === tab.id ? 'page' : undefined}
-                                >
-                                    <tab.icon className="h-5 w-5 mr-2" />
-                                    {tab.name}
-                                </button>
-                            ))}
-                            <button
-                                onClick={() => { handleLogout(); setIsMobileMenuOpen(false);}}
-                                className="flex items-center w-full text-left pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-red-600 hover:bg-red-50 hover:text-red-700"
-                            >
-                                <XIcon className="h-5 w-5 mr-2" />
-                                Logout
-                            </button>
-                        </div>
-                    </div>
-                )}
             </nav>
 
             {/* --- Main Content Area --- */}
