@@ -327,7 +327,7 @@ const PatientsTab = ({ doctorId, refreshTrigger }) => {
     
     try {
       const response = await fetch(
-        `http://localhost:8080/api/appointments/doctor/${doctorId}/status/Confirmed`
+        `https://mediflow-s7af.onrender.com/api/appointments/doctor/${doctorId}/status/Confirmed`
       );
       
       if (!response.ok) throw new Error(`Failed to fetch patients: ${response.status}`);
@@ -459,7 +459,7 @@ const MedicalRecordsTab = ({ doctorId, refreshTrigger }) => {
     const fetchRecords = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`http://localhost:8080/api/medical-records/doctor/${doctorId}`);
+        const response = await fetch(`https://mediflow-s7af.onrender.com/api/medical-records/doctor/${doctorId}`);
         if (!response.ok) {
           throw new Error('Failed to fetch medical records');
         }
