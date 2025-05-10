@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Login from './pages/login';
 import SignupPage from './components/signuppage';
@@ -15,23 +15,13 @@ import AdminSignup from './pages/adminSignup';
 import DoctorsDashboard from './pages/DoctorsDashboard';
 import DoctorLogin from './pages/DoctorLogin';
 import AdminDashboard from './pages/AdminDashboard';
-import logo from './assets/images/logo1.png'; // Import your logo
 
 function App() {
-  // Set the favicon dynamically
-  useEffect(() => {
-    const link = document.createElement('link');
-    link.rel = 'icon';
-    link.type = 'image/png';
-    link.href = logo;
-    document.head.appendChild(link);
-  }, []);
-
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<Login />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/patient-signup-1" element={<PatientSignup1 />} />
         <Route path="/patient-signup-2" element={<PatientSignup2 />} />
@@ -47,5 +37,4 @@ function App() {
     </Router>
   );
 }
-
 export default App;
